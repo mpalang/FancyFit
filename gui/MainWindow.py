@@ -36,6 +36,8 @@ if str(Path(__file__).parent.parent) not in sys.path:
   sys.path.append(str(Path(__file__).parent.parent))
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,
                           ParmsPanel)
+
+from gui import __version__
 from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 logger = add_logger(__name__)
@@ -50,7 +52,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
      try:
         super().__init__()
-        self.setWindowTitle("Smore's Fancy Fit App")
+        self.setWindowTitle(f"Smore's Fancy Fit App V{__version__}")
         self.resize(1200, 500)
         self.load_settings()
         self.initialize_data()
@@ -461,6 +463,8 @@ class MainWindow(QMainWindow):
         
         self.data = self.data.cut_data(x_low=x_low,x_high=x_high,y_low=y_low,y_high=y_high)
         
+        self.refresh_sliders()
+        
         self.make_plot1()
         self.make_plot2()
         self.make_plot3D()
@@ -656,10 +660,7 @@ class MainWindow(QMainWindow):
 # ENTRY POINT (Spyder-safe)
 # ---------------------------
 if __name__ == "__main__":
-    app = QApplication.instance()
-
-    if app is None:
-        app = QApplication(sys.argv)
+    app = QApplication(sys.argv)
     
     icon_path = Path(r"C:\Users\morit\OneDrive\Anwendungen\FancyFit\icon.ico")
     app.setWindowIcon(QIcon(str(icon_path)))
@@ -667,9 +668,5 @@ if __name__ == "__main__":
     window.setWindowIcon(QIcon(str(icon_path)))
     window.show()
     
-
-    if not QApplication.instance().startingUp():
-        sys.exit(app.exec())
-    else:
-       app.exec()
+    sys.exit(app.exec())
         

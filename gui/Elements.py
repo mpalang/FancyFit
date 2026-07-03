@@ -207,9 +207,9 @@ class ParmRow(QWidget):
         self.p_lower_input = Inputbox(layout,default=p_lower)
         self.p_upper_input = Inputbox(layout,default=p_upper)
                  
-        self.p0_input.textChanged.connect(self.validate)
-        self.p_lower_input.textChanged.connect(self.validate)
-        self.p_upper_input.textChanged.connect(self.validate)
+        # self.p0_input.textChanged.connect(self.validate)
+        # self.p_lower_input.textChanged.connect(self.validate)
+        # self.p_upper_input.textChanged.connect(self.validate)
         
         
     def validate(self):

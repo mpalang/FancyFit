@@ -5,25 +5,17 @@ Created on Sat Jun 20 23:58:36 2026
 @author: morit
 """
 from PySide6.QtCore import QStandardPaths
-from PySide6.QtWidgets import QFileDialog
 import json
 from dataclasses import dataclass
 from pathlib import Path
-import sys
 
 import sympy as sp
 import numpy as np
-from scipy.signal import convolve
-from scipy.special import erf
-from typing import Callable
 from copy import deepcopy
 
 # Add personal modules:
-if str(Path(__file__).parent.parent) not in sys.path:
-  sys.path.append(str(Path(__file__).parent.parent))
 from utils.logger import add_logger  
 logger = add_logger(__name__)
-import traceback
 
 @dataclass
 class data_class:
@@ -152,7 +144,7 @@ class fancyfitSettings:
 @dataclass
 class fitFunction:
     name: str
-    expr: 'sympy expression'
+    expr: str
     parm_names: list[str]
     p0: list[float]
     p_lower: list[float]
@@ -216,7 +208,7 @@ class FitFunctions:
                 logger.info(f"User functions file created:\n {self.functions_file}")
         except Exception as e:
             self.default()
-            logger.error(traceback.format_exc())
+            logger.exception('Failed to load user user functions.')
             logger.info(f'Failed to load user user functions. Using defaults instead.\n {e}')
     
     def save(self):
@@ -230,30 +222,39 @@ class FitFunctions:
             
     def default(self):
         
-        def conv(a1,a2,x,mode='full',method='auto'):
-            shift=np.argmax(x>0)-1
-            y=convolve(a1,a2,mode=mode,method=method)[shift:shift+len(x)]
-            return y
+        def conv(y, yc):
+            yc = np.asarray(yc, dtype=float)
+            yc = yc / np.sum(yc) #normalize convolution function
+            y_conv = np.convolve(y, yc, mode="full")
+            # center kernel
+            k = len(yc) // 2
+            return y_conv[k:k + len(y)]
         setattr(self,'conv',conv)
         
+        gauss = "A/(s*sqrt(2*pi))*exp(-(x-x0)**2/(2*s**2))"
+        self.funs['gauss'] = fitFunction('gauss',gauss,['x0','A','s'],
+                                      [0,1,1],[-1,0,0],[1,10,10],
+                                      ['x0'])
         
-        # def gauss(x,x0,A,FWHM): #normalized to 1 for IRF
-        #     s=FWHM/(2*np.sqrt(2*np.log(2)))
-        #     y=np.exp(-((x)**2)/(2*s**2))
-        #     return A*y/np.sum(y)
-        # setattr(self,'gauss',Function(gauss,['x0','A','FWHM'],
-        #                               [0,1,1],[-1,0,0],[1,10,10],
-        #                               ['t0']))
+        dgauss = "-A*(x-x0)/(s**3*sqrt(2*pi))*exp(-(x-x0)**2/(2*s**2))"
+        self.funs['dgauss'] = fitFunction('dgauss',dgauss,['x0','A','s'],
+                                      [0,1,1],[-1,0,0],[1,10,10],
+                                      ['x0'])
+        
+        d2gauss = "A*((x-x0)**2/s**4 - 1/s**2)/(s*sqrt(2*pi))*exp(-(x-x0)**2/(2*s**2))"
+        self.funs['d2gauss'] = fitFunction('d2gauss',d2gauss,['x0','A','s'],
+                                      [0,1,1],[-1,0,0],[1,10,10],
+                                      ['x0'])
 
-        exp_decay = "A*exp(-(x-t0)/tau)*heaviside(x-t0,0)"
-        self.funs['exp_decay'] = fitFunction('exp_decay',exp_decay,['t0','A','tau'],
+        exp_decay = "A*exp(-(x-x0)/tau)*heaviside(x-x0,0)"
+        self.funs['exp_decay'] = fitFunction('exp_decay',exp_decay,['x0','A','tau'],
                                       [0,1,1e7],[-1,1,1e5],[1,1,1e9],
-                                      ['t0'])
+                                      ['x0'])
         
-        second_order = "heaviside((x-t0),0)*A/(1+c0*k*(x-t0))"
-        self.funs['second_order'] = fitFunction('second_order',second_order,['t0','A','k','c0'],
+        second_order = "heaviside((x-x0),0)*A/(1+c0*k*(x-x0))"
+        self.funs['second_order'] = fitFunction('second_order',second_order,['x0','A','k','c0'],
                                       [0,1,1e-6,1],[-1,1,1e-8,1],[1,1,1e-5,1],
-                                      ['t0'])
+                                      ['x0'])
         
         # exp_decay_conv_gauss = """((A/2)*
         #                         exp((FWHM/(2*sqrt(2*log(2))))**2/
