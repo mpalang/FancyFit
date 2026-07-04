@@ -32,14 +32,13 @@ from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 
 # Add personal modules:
-if str(Path(__file__).parent.parent) not in sys.path:
-  sys.path.append(str(Path(__file__).parent.parent))
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,
                           ParmsPanel)
 
 from gui import __version__
 from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
+from utils.plotting import timecontour
 logger = add_logger(__name__)
 import traceback
   
@@ -235,12 +234,14 @@ class MainWindow(QMainWindow):
         layout_2D.setSpacing(5)
         
         figsize_2D = (18,9)
+        
         self.plot1 = MplCanvas(figsize=figsize_2D)
         self.plot1.ax.set_title(self.set.x_name)
         self.plot1.ax.set_xlabel(self.set.x_label+'/'+self.set.x_unit)
         self.plot1.ax.set_ylabel(self.set.z_label+'/'+self.set.z_unit)
         self.plot1.ax.axhline(0,color='k',linewidth=self.plot1.ax.spines['left'].get_linewidth())
         layout_2D.addWidget(self.plot1)
+        
         self.lines1 = self.plot1.ax.plot([None],[None],[None],[None],[None],[None]) # 2 is number of lines shown...maybe I need to change that later
         self.lines1[0].set_linestyle('None')
         self.lines1[0].set_marker('o')
@@ -292,7 +293,8 @@ class MainWindow(QMainWindow):
         tab_3D = QWidget()
         layout_3D = QGridLayout()
         figsize_3D=(9,9)
-        self.plot3D_Z = MplCanvas(figsize=figsize_3D)
+        fig,ax = timecontour(self.data.y,self.data.x,self.data.z)
+        self.plot3D_Z = MplCanvas(figsize=figsize_3D,fig=fig,ax=ax)
         layout_3D.addWidget(self.plot3D_Z,0,0)
         
         self.plot3D_Zfit = MplCanvas(figsize=figsize_3D)
@@ -396,6 +398,7 @@ class MainWindow(QMainWindow):
     # Data and Settings Functions:
     # =============================================================================
     def initialize_data(self):
+        self.data = data_class(Empty=True)
         self.funs_input = []
         self.parms_input = []
         self.p0_input = []

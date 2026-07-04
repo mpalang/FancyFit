@@ -39,11 +39,16 @@ logger = add_logger(__name__)
 # SIMPLE PLOT WIDGET WRAPPER
 # ---------------------------
 class MplCanvas(FigureCanvas):
-    def __init__(self,figsize=None):
-        self.fig = Figure(constrained_layout=True,dpi=80) #
-        if figsize:
-            self.fig.set_size_inches(8,6)
-        self.ax = self.fig.add_subplot(111)
+    def __init__(self,figsize=None,fig=None,ax=None):
+        if not (fig or ax):
+            self.fig = Figure(constrained_layout=True,dpi=80) #
+            if figsize:
+                self.fig.set_size_inches(8,6)
+            self.ax = self.fig.add_subplot(111)
+            
+        else:
+            self.fig=fig
+            self.ax=ax
         super().__init__(self.fig)  
         # figsize_factor = 0.25
         # self.setFixedSize(figsize_factor*2000,figsize_factor*1000)         
