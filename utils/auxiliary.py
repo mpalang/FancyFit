@@ -133,6 +133,7 @@ class fancyfitSettings:
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
         self.fit_method = 'iminuit'
+        self.use_irf = False
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','Z.txt'))
