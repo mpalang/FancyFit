@@ -29,16 +29,15 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QFont, QIcon
 
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
+# from PySide6.QtCore import Qt
 
 # Add personal modules:
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,
-                          ParmsPanel)
+from gui.Elements import (Button,Slider,Dropdown,Inputbox,Label,ParmsPanel)
 
 from gui import __version__
 from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
-from utils.plotting import timecontour
+from utils.plotting import LineCanvas,ContourCanvas
 logger = add_logger(__name__)
 import traceback
   
@@ -51,12 +50,11 @@ class MainWindow(QMainWindow):
     def __init__(self):
      try:
         super().__init__()
-        self.setWindowTitle(f"Smore's Fancy Fit App V{__version__}")
+        self.setWindowTitle(f"Smore's Fancy Fit App v{__version__}")
         self.resize(1200, 500)
         self.load_settings()
         self.initialize_data()
         self.build_gui()
-        self.load_data()
         
         self.results_box.setText('Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!')
     
@@ -120,7 +118,6 @@ class MainWindow(QMainWindow):
         save_action.triggered.connect(self.save_results)
         exit_action.triggered.connect(self.exit_app)
 
-
         settings_menu = menu.addMenu("Settings")        
         preferences_action = QAction("User Settings", self)
         functionbuilder_action = QAction("Function Builder", self)
@@ -150,10 +147,10 @@ class MainWindow(QMainWindow):
         layout_datatweak.addWidget(QLabel("Set Ranges"), 0, 0)
         Button(layout_datatweak,'cut data',command = self.cut_data, layout_args = (0, 1))
         Button(layout_datatweak,'full data',command = self.full_data, layout_args = (0, 2))
-        layout_datatweak.addWidget(QLabel(), 1, 0)
+        layout_datatweak.addWidget(QLabel(self.set.x_label), 1, 0)
         self.xcut_low = Inputbox(layout_datatweak,default='',layout_args= (1, 1))#TODO: replace with SpinboxDouble
         self.xcut_high = Inputbox(layout_datatweak,default='',layout_args= (1,2))
-        layout_datatweak.addWidget(QLabel("x"), 2, 0)
+        layout_datatweak.addWidget(QLabel(self.set.y_label), 2, 0)
         self.ycut_low = Inputbox(layout_datatweak,default='',layout_args= (2,1))
         self.ycut_high = Inputbox(layout_datatweak,default='',layout_args= (2,2))
 
@@ -164,9 +161,12 @@ class MainWindow(QMainWindow):
         frame_fitsettings = QFrame()
         frame_fitsettings.setFrameShape(QFrame.StyledPanel)
         frame_fitsettings.setFrameShadow(QFrame.Raised)
-        layout_fitsettings = QHBoxLayout()
-        Label(layout_fitsettings,'Mode')
-        Dropdown(layout_fitsettings,['Global','Simple'])
+        layout_fitsettings = QGridLayout()
+        Label(layout_fitsettings,'Mode',layout_args=(0,0))
+        Dropdown(layout_fitsettings,['Global','Simple'],layout_args=(0,1))
+        Label(layout_fitsettings,'Method',layout_args=(0,0))
+        Dropdown(layout_fitsettings,['iminuit','others...'],layout_args=(0,1))
+
         frame_fitsettings.setLayout(layout_fitsettings)
         self.left_panel.addWidget(frame_fitsettings)
         
@@ -235,56 +235,20 @@ class MainWindow(QMainWindow):
         
         figsize_2D = (18,9)
         
-        self.plot1 = MplCanvas(figsize=figsize_2D)
-        self.plot1.ax.set_title(self.set.x_name)
-        self.plot1.ax.set_xlabel(self.set.x_label+'/'+self.set.x_unit)
-        self.plot1.ax.set_ylabel(self.set.z_label+'/'+self.set.z_unit)
-        self.plot1.ax.axhline(0,color='k',linewidth=self.plot1.ax.spines['left'].get_linewidth())
-        layout_2D.addWidget(self.plot1)
-        
-        self.lines1 = self.plot1.ax.plot([None],[None],[None],[None],[None],[None]) # 2 is number of lines shown...maybe I need to change that later
-        self.lines1[0].set_linestyle('None')
-        self.lines1[0].set_marker('o')
-        self.lines1[0].set_markerfacecolor('None')
-        self.lines1[0].set_markeredgecolor('k')
-        self.lines1[0].set_markeredgewidth(0.5)
-        self.lines1[0].set_markersize(6)
-        self.lines1[1].set_linestyle('None')
-        self.lines1[1].set_marker('o')
-        self.lines1[1].set_markersize(0.4)
-        self.lines1[1].set_markerfacecolor('k')
-        self.lines1[1].set_markeredgecolor('k')
-        self.lines1[2].set_color('red')
+        self.plot_kin = LineCanvas(figsize=figsize_2D)
+        layout_2D.addWidget(self.plot_kin)
         
         slider_layout1 = QHBoxLayout()
-        self.slider1 = Slider(slider_layout1,command=self.make_plot1,label_format='plain')
-        self.rescale_button1 = Button(slider_layout1,'rescale',command = self.rescale_plot1)
+        self.slider1 = Slider(slider_layout1,command=self.make_plot_kin,label_format='plain')
+        self.rescale_button1 = Button(slider_layout1,'rescale',command = self.rescale_plot_kin)
         layout_2D.addLayout(slider_layout1)
 
-        
-        self.plot2 = MplCanvas(figsize=figsize_2D)
-        self.plot2.ax.set_title(self.set.y_name)
-        self.plot2.ax.set_xlabel(self.set.y_label+'/'+self.set.y_unit)
-        self.plot2.ax.set_ylabel(self.set.z_label+'/'+self.set.z_unit)
-        self.plot2.ax.axhline(0,color='k',linewidth=self.plot2.ax.spines['left'].get_linewidth())
-        layout_2D.addWidget(self.plot2)
-        self.lines2 = self.plot2.ax.plot([None],[None],[None],[None],[None],[None])
-        self.lines2[0].set_linestyle('None')
-        self.lines2[0].set_marker('o')
-        self.lines2[0].set_markerfacecolor('None')
-        self.lines2[0].set_markeredgecolor('k')
-        self.lines2[0].set_markeredgewidth(0.5)
-        self.lines2[0].set_markersize(6)
-        self.lines2[1].set_linestyle('None')
-        self.lines2[1].set_marker('o')
-        self.lines2[1].set_markersize(0.4)
-        self.lines2[1].set_markerfacecolor('k')
-        self.lines2[1].set_markeredgecolor('k')
-        self.lines2[2].set_color('red')
+        self.plot_spec = LineCanvas(figsize=figsize_2D)
+        layout_2D.addWidget(self.plot_spec)
         
         slider_layout2 = QHBoxLayout()
-        self.slider2 = Slider(slider_layout2,command=self.make_plot2,label_format='sci')
-        self.rescale_button2 = Button(slider_layout2,'rescale',command = self.rescale_plot2)
+        self.slider2 = Slider(slider_layout2,command=self.make_plot_spec,label_format='sci')
+        self.rescale_button2 = Button(slider_layout2,'rescale',command = self.rescale_plot_spec)
         layout_2D.addLayout(slider_layout2)
         
         tab_2D.setLayout(layout_2D)
@@ -293,23 +257,29 @@ class MainWindow(QMainWindow):
         tab_3D = QWidget()
         layout_3D = QGridLayout()
         figsize_3D=(9,9)
-        fig,ax = timecontour(self.data.y,self.data.x,self.data.z)
-        self.plot3D_Z = MplCanvas(figsize=figsize_3D,fig=fig,ax=ax)
+
+        self.plot3D_Z = ContourCanvas(figsize=figsize_3D,layout='split')
         layout_3D.addWidget(self.plot3D_Z,0,0)
         
-        self.plot3D_Zfit = MplCanvas(figsize=figsize_3D)
+        self.plot3D_Zfit = ContourCanvas(figsize=figsize_3D,layout='split')
         layout_3D.addWidget(self.plot3D_Zfit,0,1)
         
-        self.plot3D_res = MplCanvas(figsize=figsize_3D)
+        self.plot3D_res = ContourCanvas(figsize=figsize_3D,layout='split')
         layout_3D.addWidget(self.plot3D_res,1,0)
         
-        self.plot3D_DADS = MplCanvas(figsize=figsize_3D)
+        self.plot3D_DADS = LineCanvas(figsize=figsize_3D)
         layout_3D.addWidget(self.plot3D_DADS,1,1)
         
+        layout_3D.setRowStretch(0, 1)
+        layout_3D.setRowStretch(1, 1)
+        layout_3D.setColumnStretch(0, 1)
+        layout_3D.setColumnStretch(1, 1)
         tab_3D.setLayout(layout_3D)
         plot_tabs.addTab(tab_3D,'3D plots')
         
         self.main_layout.addWidget(plot_tabs, 3)
+        
+        self.set_labels()
 
 
     def build_results_panel(self):
@@ -337,7 +307,7 @@ class MainWindow(QMainWindow):
                 common_parms.append(new_common_parm)
                 common_parms = [v for v in common_parms if v!='' and v!=' ']
         self.common_parms_input.setText((','.join(common_parms)))
-        
+       
     def remove_component(self):
         if self.parm_tabs.count()>1:
             index = self.parm_tabs.currentIndex()
@@ -420,22 +390,19 @@ class MainWindow(QMainWindow):
                                                 self.set.scaling_factor_z,))
             elif type(data) == data_class:
                 self.data = data
-            
             else:
                 self.data = data_class(Empty = True)
                 
-            
-            
             self.data.DADS = np.full((self.parm_tabs.count(),len(self.data.y)),np.nan)
             
             self.refresh_sliders()
             
-            self.make_plot1()
-            self.make_plot2()
+            self.make_plot_kin()
+            self.make_plot_spec()
             self.make_plot3D()
             
-            self.rescale_plot1()
-            self.rescale_plot2()
+            self.rescale_plot_kin()
+            self.rescale_plot_spec()
             
             self.xcut_low.setText(str(np.floor(min(self.data.x))))
             self.xcut_high.setText(str(np.ceil(max(self.data.x))))
@@ -468,9 +435,13 @@ class MainWindow(QMainWindow):
         
         self.refresh_sliders()
         
-        self.make_plot1()
-        self.make_plot2()
+        self.make_plot_kin()
+        self.make_plot_spec()
         self.make_plot3D()
+
+        self.rescale_plot_kin()
+        self.rescale_plot_spec()
+        self.rescale_plot3D()
         
     def full_data(self):
         self.xcut_low.setText(str(np.floor(min(self.data.x_full))))
@@ -493,7 +464,8 @@ class MainWindow(QMainWindow):
             
         if reply == QMessageBox.Yes:
             self.statusBar().showMessage('restoring standard settings')
-            self.set_defaults()
+            self.set.default()
+            self.set.save()
     
     def open_filedialog(self):
         from gui.LoadDataWindow import LoadDataWindow
@@ -526,62 +498,106 @@ class MainWindow(QMainWindow):
     #%% =============================================================================
     # Plot Functions:
     # =============================================================================        
-
-    def rescale_plot1(self):
-        self.plot1.ax.relim()
-        self.plot1.ax.autoscale_view()
-        self.plot1.draw()
-        
-    def make_plot1(self):   
-        scaling_factor=1
-        iy0 = np.argmax(self.data.y>=self.slider1.slider.value())
-        self.lines1[0].set_xdata(self.data.x)
-        self.lines1[0].set_ydata(self.data.z[:,iy0]*scaling_factor)
-        self.lines1[1].set_xdata(self.data.x)
-        self.lines1[1].set_ydata(self.data.z[:,iy0]*scaling_factor)
-        self.lines1[2].set_xdata(self.data.x_fit)
-        self.lines1[2].set_ydata(self.data.z_fit[:,iy0]*scaling_factor)
-        self.plot1.draw()
-   
-    def rescale_plot2(self):
-        self.plot2.ax.relim()
-        self.plot2.ax.autoscale_view()
-        self.plot2.draw()
+    def set_labels(self):
+        self.plot_kin.fig.suptitle(self.set.x_name)
+        self.plot_kin.set_labels(self.set.x_label+'/'+self.set.x_unit,
+                                 self.set.z_label+'/'+self.set.z_unit)
+        self.plot_spec.fig.suptitle(self.set.y_name)
+        self.plot_spec.set_labels(self.set.y_label+'/'+self.set.y_unit,
+                                  self.set.z_label+'/'+self.set.z_unit)
     
-    def make_plot2(self):
-        scaling_factor=1
+    def make_plot_kin(self):   
+        kwargs_raw ={'linestyle': 'None',
+                    'marker': 'o',
+                    'markerfacecolor': 'None',
+                    'markeredgecolor': 'k',
+                    'markeredgewidth': 0.5,
+                    'markersize': 6}
+        kwargs_raw_inner ={'linestyle': 'None',
+                    'marker': 'o',
+                    'markerfacecolor': 'k',
+                    'markeredgecolor': 'k',
+                    'markeredgewidth': 0.1,
+                    'markersize': 0.4}
+        
+        iy0 = np.argmax(self.data.y>=self.slider1.slider.value())
+        self.plot_kin.set_line('raw',self.data.x,self.data.z[:,iy0],**kwargs_raw)
+        self.plot_kin.set_line('raw_inner',self.data.x,self.data.z[:,iy0],**kwargs_raw_inner)
+        self.plot_kin.set_line('fit',self.data.x_fit,self.data.z_fit[:,iy0],color='red')
+        self.plot_kin.draw_idle()
+   
+    def rescale_plot_kin(self):
+        for ax in self.plot_kin.axes:
+            self.plot_kin.axes[ax].relim()
+            self.plot_kin.axes[ax].autoscale_view()
+
+        self.plot_kin.draw_idle()  
+
+    def make_plot_spec(self):
+        kwargs_raw ={'linestyle': 'None',
+                    'marker': 'o',
+                    'markerfacecolor': 'None',
+                    'markeredgecolor': 'k',
+                    'markeredgewidth': 0.5,
+                    'markersize': 6}
+        kwargs_raw_inner ={'linestyle': 'None',
+                    'marker': 'o',
+                    'markerfacecolor': 'k',
+                    'markeredgecolor': 'k',
+                    'markeredgewidth': 0.1,
+                    'markersize': 0.4}
         ix0 = np.argmax(self.data.x>=self.slider2.slider.value())   
-        self.lines2[0].set_xdata(self.data.y)                           
-        self.lines2[0].set_ydata(self.data.z[ix0,:]*scaling_factor)
-        self.lines2[1].set_xdata(self.data.y)                           
-        self.lines2[1].set_ydata(self.data.z[ix0,:]*scaling_factor)
-        self.lines2[2].set_xdata(self.data.y_fit)                           
-        self.lines2[2].set_ydata(self.data.z_fit[ix0,:]*scaling_factor)
-        self.plot2.draw()
+        self.plot_spec.set_line('raw',self.data.y,self.data.z[ix0,:],**kwargs_raw)
+        self.plot_spec.set_line('raw_inner',self.data.y,self.data.z[ix0,:],**kwargs_raw_inner)
+        self.plot_spec.set_line('fit',self.data.y_fit,self.data.z_fit[ix0,:],color='red')
+        self.plot_spec.draw_idle()
+        
+    def rescale_plot_spec(self):
+        for ax in self.plot_spec.axes:
+            self.plot_spec.axes[ax].relim()
+            self.plot_spec.axes[ax].autoscale_view()
+
+        self.plot_spec.draw_idle()  
         
     def make_plot3D(self):
-        sc = self.set.z_scale_for_plot
+        sc = self.set.z_3Dstretch
         zrange = np.array([np.median(self.data.z[self.data.z<0]),
                   np.median(self.data.z[self.data.z>0])])
-        zrange = list(zrange*sc)
+        zrange = list(zrange)#TODO: add option to scale zrange
         if np.isnan(zrange).any():
             zrange = [0,1]
-        self.plot3D_Z.ax.clear()
-        self.plot3D_Z.ax.contourf(self.data.y,self.data.x,self.data.z,levels=np.linspace(*zrange,20))
-        self.plot3D_Zfit.ax.clear()
-        self.plot3D_Zfit.ax.contourf(self.data.y_fit,self.data.x_fit,self.data.z_fit,levels=np.linspace(*zrange,20))
-        self.plot3D_res.ax.clear()
-        self.plot3D_res.ax.contourf(self.data.y_fit,self.data.x_fit,self.data.residuum,levels=np.linspace(*zrange,20))
-        self.plot3D_DADS.ax.clear()
-        for n in range(self.parm_tabs.count()):
-            self.plot3D_DADS.ax.plot(self.data.y_fit,self.data.DADS[n,:])
-        self.plot3D_DADS.ax.axhline(0,color='k',linewidth=self.plot3D_DADS.ax.spines['left'].get_linewidth())
         
-            
-        self.plot3D_Z.draw()
-        self.plot3D_Zfit.draw()
-        self.plot3D_res.draw()
-        self.plot3D_DADS.draw()
+        self.plot3D_Z.set_contour(self.data.y,self.data.x,self.data.z,zrange=zrange)
+        self.plot3D_Zfit.set_contour(self.data.y_fit,self.data.x_fit,self.data.z_fit,zrange=zrange)
+        self.plot3D_res.set_contour(self.data.y_fit,self.data.x_fit,self.data.residuum,zrange=zrange)
+        
+        self.plot3D_DADS.clear_lines()
+        for n in range(self.parm_tabs.count()):
+            self.plot3D_DADS.set_line(f'f{n+1}',self.data.y_fit,self.data.DADS[n,:])
+        
+        self.plot3D_Z.draw_idle()
+        self.plot3D_Zfit.draw_idle()
+        self.plot3D_res.draw_idle()
+        self.plot3D_DADS.draw_idle()
+
+    def rescale_plot3D(self):
+        for ax in self.plot3D_Z.axes:
+            self.plot3D_Z.axes[ax].relim()
+            self.plot3D_Z.axes[ax].autoscale_view()
+        for ax in self.plot3D_Zfit.axes:
+            self.plot3D_Zfit.axes[ax].relim()
+            self.plot3D_Zfit.axes[ax].autoscale_view()
+        for ax in self.plot3D_res.axes.values():
+            ax.relim()
+            ax.autoscale_view
+        for ax in self.plot3D_DADS.axes:
+            self.plot3D_DADS.axes[ax].relim()
+            self.plot3D_DADS.axes[ax].autoscale_view()
+
+        self.plot3D_Z.draw_idle() 
+        self.plot3D_Zfit.draw_idle() 
+        self.plot3D_res.draw_idle() 
+        self.plot3D_DADS.draw_idle() 
 
     # =============================================================================
     # Fit Functions and Classes:
@@ -645,8 +661,8 @@ class MainWindow(QMainWindow):
                 self.data.DADS = self.gf.DADS.T
                 self.data.residuum = self.gf.residuum.T
                 
-                self.make_plot1()
-                self.make_plot2()
+                self.make_plot_kin()
+                self.make_plot_spec()
                 self.make_plot3D()
                 
                 self.update_results()

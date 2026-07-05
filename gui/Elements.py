@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QSpinBox,
+    QDoubleSpinBox,
     QSlider,
     QMessageBox,
     QTextEdit,
@@ -27,10 +28,9 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 from PySide6.QtCore import Qt
-
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from PySide6.QtWidgets import QSizePolicy
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 
 from utils.logger import add_logger
 logger = add_logger(__name__)
@@ -38,22 +38,19 @@ logger = add_logger(__name__)
 # ---------------------------
 # SIMPLE PLOT WIDGET WRAPPER
 # ---------------------------
-class MplCanvas(FigureCanvas):
-    def __init__(self,figsize=None,fig=None,ax=None):
-        if not (fig or ax):
-            self.fig = Figure(constrained_layout=True,dpi=80) #
-            if figsize:
-                self.fig.set_size_inches(8,6)
-            self.ax = self.fig.add_subplot(111)
-            
-        else:
-            self.fig=fig
-            self.ax=ax
-        super().__init__(self.fig)  
-        # figsize_factor = 0.25
-        # self.setFixedSize(figsize_factor*2000,figsize_factor*1000)         
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.updateGeometry()
+# class MplCanvas(FigureCanvasQTAgg):
+#     def __init__(self,figsize=None):
+#         self.fig = Figure(constrained_layout=True,dpi=80) #
+#         if figsize:
+#             self.fig.set_size_inches(8,6)
+#         self.ax = self.fig.add_subplot(111)
+#         super().__init__(self.fig)  
+#         # figsize_factor = 0.25
+#         # self.setFixedSize(figsize_factor*2000,figsize_factor*1000)         
+#         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+#         self.updateGeometry()
+
+        
 
 def Dropdown(root,items,standard=None,command=lambda:None,grid=(),layout_args=()):
     if grid and not layout_args:
@@ -65,50 +62,62 @@ def Dropdown(root,items,standard=None,command=lambda:None,grid=(),layout_args=()
     root.addWidget(w,*layout_args)
 
     return w
-        
-def Spinbox(root,lower,upper,standard,grid=(),layout_args=()):
-    if grid and not layout_args:
-        layout_args = grid        
-    w = QSpinBox()
-    w.setRange(lower,upper)
-    w.setValue(standard)
-    root.addWidget(w,*layout_args)
-    return w
+  
+class Spinbox(QSpinBox):
+    def __init__(self,root=None,lower=0,upper=100,standard=0,layout_args=(),grid=(),expand=False):
+        super().__init__()
+        if grid and not layout_args:
+            layout_args = grid        
+        if lower and upper:
+            self.setRange(lower,upper)
+        if standard:
+            self.setValue(standard)
+        if root:
+            root.addWidget(self,*layout_args)
+        if expand:
+            self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+            )  
 
-def SpinboxDouble(root,default=0,limits=(-1e9,1e9),grid=()):
-    w = QSpinBox()
-    w.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
-    if limits:
-        w.setRange(*limits)
-    w.setValue(default)
-    root.addWidget(w,*grid)
-    return w
+class SpinboxDouble(QDoubleSpinBox):
+    def __init__(self,root=None,default=0,limits=(-1e9,1e9),grid=()):
+        super().__init__()
+        self.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        if any(limits):
+            self.setRange(*limits)
+        if default:
+            self.setValue(default)
+        if root:
+            root.addWidget(self,*grid)
 
-def Button(root,name,command = lambda:None,grid=(),layout_args=(),expand=False):
-    if grid and not layout_args:
-        layout_args = grid    
-    w = QPushButton(name)
-    root.addWidget(w,*layout_args)
-    w.clicked.connect(command)
-    if expand:
-        w.setSizePolicy(
-        QSizePolicy.Policy.Expanding,
-        QSizePolicy.Policy.Expanding
-        )
-    return w      
-
-def Inputbox(root,default='',layout_args=(),grid=(),expand=False):
-    if grid and not layout_args:
-        layout_args = grid
-    w = QLineEdit()
-    root.addWidget(w,*layout_args)
-    w.setText(str(default))
-    if expand:
-        w.setSizePolicy(
-        QSizePolicy.Policy.Expanding,
-        QSizePolicy.Policy.Fixed
-        )
-    return w
+class Button(QPushButton):
+    def __init__(self,root=None,name='',command = lambda:None,grid=(),layout_args=(),expand=False):
+        super().__init__(name)
+        if grid and not layout_args:
+            layout_args = grid    
+        if root:
+            root.addWidget(self,*layout_args)
+        self.clicked.connect(command)
+        if expand:
+            self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding)
+                
+class Inputbox(QLineEdit):
+    def __init__(self,root=None,default='',layout_args=(),grid=(),expand=False):
+        super().__init__()
+        if grid and not layout_args:
+            layout_args = grid
+        if root:
+            root.addWidget(self,*layout_args)
+        if default:
+            self.setText(str(default))
+        if expand:
+            self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+            )
 
 def Textbox(root,geometry,default='',layout_args=(),grid=()):
     if grid and not layout_args:
