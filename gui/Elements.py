@@ -2,8 +2,11 @@
 """
 Created on Wed Jun 17 11:36:40 2026
 
-@author: morit
+@author: moritzpalang
 """
+# from curses.textpad import Textbox
+
+from PySide6 import QtWidgets
 import numpy as np
 from pathlib import Path
 
@@ -37,31 +40,26 @@ logger = add_logger(__name__)
 
 # ---------------------------
 # SIMPLE PLOT WIDGET WRAPPER
-# ---------------------------
-# class MplCanvas(FigureCanvasQTAgg):
-#     def __init__(self,figsize=None):
-#         self.fig = Figure(constrained_layout=True,dpi=80) #
-#         if figsize:
-#             self.fig.set_size_inches(8,6)
-#         self.ax = self.fig.add_subplot(111)
-#         super().__init__(self.fig)  
-#         # figsize_factor = 0.25
-#         # self.setFixedSize(figsize_factor*2000,figsize_factor*1000)         
-#         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-#         self.updateGeometry()
+# --------------------------
+class Checkbox(QCheckBox):
+    def __init__(self,root=None,default=True,grid=()):
+        super().__init__()
+        self.setChecked(default)
+        if root:
+            root.addWidget(self,*grid)
 
-        
 
-def Dropdown(root,items,standard=None,command=lambda:None,grid=(),layout_args=()):
-    if grid and not layout_args:
-        layout_args = grid    
-    w = QComboBox()
-    w.addItems(items)
-    w.setCurrentText(standard)
-    w.currentTextChanged.connect(command)
-    root.addWidget(w,*layout_args)
-
-    return w
+class Dropdown(QComboBox):
+    def __init__(self,root=None,items=None,standard=None,command=lambda:None,grid=(),layout_args=()):
+        super().__init__()
+        if grid and not layout_args:
+            layout_args = grid 
+        if items:
+            self.addItems(items)
+        if standard:
+            self.setCurrentText(standard)
+        self.currentTextChanged.connect(command)
+        root.addWidget(self,*layout_args)
   
 class Spinbox(QSpinBox):
     def __init__(self,root=None,lower=0,upper=100,standard=0,layout_args=(),grid=(),expand=False):
@@ -119,96 +117,142 @@ class Inputbox(QLineEdit):
             QSizePolicy.Policy.Fixed
             )
 
-def Textbox(root,geometry,default='',layout_args=(),grid=()):
-    if grid and not layout_args:
-        layout_args = grid
-    w = QTextEdit()
-    # w.setGeometry(*geometry)
-    root.addWidget(w,*layout_args)
-    return w
-    
-def Label(root,text,bold=False,grid=(),layout_args=()):
-    if grid and not layout_args:
-        layout_args = grid
-    w = QLabel(text)
-    if bold:
-        w.setStyleSheet('font-weight: bold;')
-    root.addWidget(w,*layout_args)
-    return w
-    
-    
+class Textbox(QTextEdit):
+    def __init__(self, root=None, geometry=None, default='', layout_args=(), grid=()):
+        super().__init__()
+        if grid and not layout_args:
+            layout_args = grid
 
-def Slider(root,value_range=(0,100),command=lambda:None,label_format='plain'):
+        # w.setGeometry(*geometry)
+        if root:
+            root.addWidget(self,*layout_args)
     
-   class slider_with_label:
-       def __init__(self,root,value_range,label_format=label_format):
-           self.command = command
-           self.label_format = label_format
-           if np.nan in value_range:
-               value_range = (0,1)
+class Label(QLabel):
+    def __init__(self,root=None,text='', bold=False,grid=(),layout_args=()):
+        super().__init__(text)
+        if grid and not layout_args:
+            layout_args = grid
+        if bold:
+            self.setStyleSheet('font-weight: bold;')
+        if root:
+            root.addWidget(self,*layout_args)
+
+
+class Slider(QWidget):
+    def __init__(
+                self,
+                root=None,
+                value_range=(0, 100),
+                command=lambda: None,
+                label_format="plain",
+                ):
+        super().__init__()
+
+        self.command = command
+        self.label_format = label_format
+
+        layout = QHBoxLayout(self)
+
+        self.slider = QSlider(Qt.Horizontal)
+        self.label = Label(text="")
+
+        if np.nan in value_range:
+            value_range = (0, 1)
+
+        self.slider.setRange(*value_range)
+        self.slider.setValue((value_range[0] + value_range[1]) // 2)
+
+        self.slider.valueChanged.connect(self.on_slide)
+
+        layout.addWidget(self.slider)
+        layout.addWidget(self.label)
+
+        if root:
+            root.addWidget(self)
+
+    def format_value(self, value):
+        if self.label_format == "sci":
+            return f"{value:.2e}"
+        return str(value)
+
+    def on_slide(self):
+        value = self.slider.value()
+        self.label.setText(self.format_value(value))
+        self.command()
            
-           slider_layout = QHBoxLayout()
+
+
+# def Slider(root,value_range=(0,100),command=lambda:None,label_format='plain'):
+    
+#    class slider_with_label:
+#        def __init__(self,root,value_range,label_format=label_format):
+#            self.command = command
+#            self.label_format = label_format
+#            if np.nan in value_range:
+#                value_range = (0,1)
+           
+#            slider_layout = QHBoxLayout()
        
-           slider = QSlider(Qt.Horizontal)
-           slider.setRange(*value_range)
-           slider.setValue((value_range[0]+value_range[1])/2)
-           slider.setSingleStep(1)
-           slider_layout.addWidget(slider)
-           slider.valueChanged.connect(self.on_slide)
+#            slider = QSlider(Qt.Horizontal)
+#            slider.setRange(*value_range)
+#            slider.setValue((value_range[0]+value_range[1])/2)
+#            slider.setSingleStep(1)
+#            slider_layout.addWidget(slider)
+#            slider.valueChanged.connect(self.on_slide)
            
-           slider.setStyleSheet("""
-                                QSlider::groove:horizontal {
-                                    border: none;
-                                    height: 2px;
-                                    background: gray;
-                                }
+#            slider.setStyleSheet("""
+#                                 QSlider::groove:horizontal {
+#                                     border: none;
+#                                     height: 2px;
+#                                     background: gray;
+#                                 }
                                 
-                                QSlider::sub-page:horizontal {
-                                    background: gray;
-                                }
+#                                 QSlider::sub-page:horizontal {
+#                                     background: gray;
+#                                 }
                                 
-                                QSlider::add-page:horizontal {
-                                    background: gray;
-                                }
+#                                 QSlider::add-page:horizontal {
+#                                     background: gray;
+#                                 }
                                 
-                                QSlider::handle:horizontal {
-                                    background: black;
-                                    width: 5px;
-                                    margin: -6px 0;
-                                }
+#                                 QSlider::handle:horizontal {
+#                                     background: black;
+#                                     width: 5px;
+#                                     margin: -6px 0;
+#                                 }
                                 
-                                """)
+#                                 """)
             
             
 
-           label = QLabel(self.format_value(slider.value()))
+#            label = QLabel(self.format_value(slider.value()))
            
-           self.slider = slider
-           self.label = label
+#            self.slider = slider
+#            self.label = label
            
-           self.label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-           self.slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+#            self.label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+#            self.slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
            
-           slider_layout.addWidget(self.slider)
-           slider_layout.addWidget(self.label)
+#            slider_layout.addWidget(self.slider)
+#            slider_layout.addWidget(self.label)
     
-           root.addLayout(slider_layout)
+#            root.addLayout(slider_layout)
            
-       def format_value(self,number):
-         if self.label_format == "sci":
-             return f"{number:.2e}"
-         else:
-             return str(number) 
+#        def format_value(self,number):
+#          if self.label_format == "sci":
+#              return f"{number:.2e}"
+#          else:
+#              return str(number) 
          
-       def on_slide(self):
-          self.command()
-          self.label.setText(self.format_value(self.slider.value()))
+#        def on_slide(self):
+#           self.command()
+#           self.label.setText(self.format_value(self.slider.value()))
                 
 
            
-   w = slider_with_label(root,value_range)
+#    w = slider_with_label(root,value_range)
            
-   return w
+#    return w
 
 class ParmRow(QWidget):
     def __init__(self,name,p0,p_lower,p_upper):

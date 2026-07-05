@@ -97,8 +97,8 @@ class MainWindow(QMainWindow):
         # ---------------------------
         # STATUS BAR
         # ---------------------------
-        self.status_label1 = QLabel("")
-        self.status_label2 = QLabel("no data")
+        self.status_label1 = QLabel("no data")
+        self.status_label2 = QLabel("no fit")
         self.statusBar().addPermanentWidget(self.status_label1)
         self.statusBar().addPermanentWidget(self.status_label2)
         self.statusBar().showMessage('Ready...')
@@ -164,8 +164,8 @@ class MainWindow(QMainWindow):
         layout_fitsettings = QGridLayout()
         Label(layout_fitsettings,'Mode',layout_args=(0,0))
         Dropdown(layout_fitsettings,['Global','Simple'],layout_args=(0,1))
-        Label(layout_fitsettings,'Method',layout_args=(0,0))
-        Dropdown(layout_fitsettings,['iminuit','others...'],layout_args=(0,1))
+        Label(layout_fitsettings,'Method',layout_args=(1,0))
+        Dropdown(layout_fitsettings,['iminuit','others...'],layout_args=(1,1))
 
         frame_fitsettings.setLayout(layout_fitsettings)
         self.left_panel.addWidget(frame_fitsettings)
@@ -382,6 +382,7 @@ class MainWindow(QMainWindow):
         self.FitFuns = FitFunctions()#Replace old FitFuns with new sympy method
             
     def load_data(self, data: data_class=None ,use_test_data=False):
+        self.statusBar().showMessage('Loading Data...')
         try:
             if self.set.use_testdata or use_test_data:
                 self.data = data_class(TestData=True,
@@ -408,6 +409,8 @@ class MainWindow(QMainWindow):
             self.xcut_high.setText(str(np.ceil(max(self.data.x))))
             self.ycut_low.setText(str(np.floor(min(self.data.y))))
             self.ycut_high.setText(str(np.ceil(max(self.data.y))))
+
+            self.status_label1.setText(f'Data Loaded: {len(self.data.x)} x points, {len(self.data.y)} y points and {str(len(self.data.y)).replace(',','x')} z points')
         
         except Exception as e:
             logger.exception('Error Loading Data')
@@ -426,6 +429,7 @@ class MainWindow(QMainWindow):
         # self.slider2.slider.setSingleStep(1)
     
     def cut_data(self):
+        self.statusBar().showMessage('cutting data...')
         x_low = float(self.xcut_low.text())
         x_high = float(self.xcut_high.text())
         y_low = float(self.ycut_low.text())
@@ -442,6 +446,7 @@ class MainWindow(QMainWindow):
         self.rescale_plot_kin()
         self.rescale_plot_spec()
         self.rescale_plot3D()
+        self.statusBar().showMessage('Ready...')
         
     def full_data(self):
         self.xcut_low.setText(str(np.floor(min(self.data.x_full))))
@@ -452,7 +457,7 @@ class MainWindow(QMainWindow):
         self.cut_data()
     
     def reset_user_defaults(self):
-        pass#TODO: reset to user settings
+        self.set = fancyfitSettings()
     
     def restore_defaults(self):#TODO reset to default settings
         reply = QMessageBox.question(
@@ -466,14 +471,14 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage('restoring standard settings')
             self.set.default()
             self.set.save()
+            self.statusBar().showMessage('Ready...')
     
     def open_filedialog(self):
         from gui.LoadDataWindow import LoadDataWindow
         ldw = LoadDataWindow()
         if ldw.exec():
             self.load_data(data = ldw.data)
-        
-        
+
     def open_settings(self):
         from gui.SettingsWindow import SettingsWindow
         sw = SettingsWindow()
@@ -486,14 +491,18 @@ class MainWindow(QMainWindow):
         from gui.FunctionBuilder import FunctionBuilder
         fbw = FunctionBuilder()
         if fbw.exec():
-            self.statusBar().showMessage('Function added')        
+            self.statusBar().showMessage('Function added',2000)             
 
-        
       except Exception as e:
           QMessageBox.critical(self,'Error',e)
     
     def save_results(self):
         self.statusBar().showMessage('saving results')
+        folder = Path(self.set.z_data_path).parent
+        filename = Path(self.set.z_data_path).stem+'_fit_results.txt'
+        filepath = folder/filename
+        with open(filepath,'w') as f:
+            f.write(self.results_box.toPlainText())
     
     #%% =============================================================================
     # Plot Functions:
@@ -560,10 +569,10 @@ class MainWindow(QMainWindow):
         self.plot_spec.draw_idle()  
         
     def make_plot3D(self):
-        sc = self.set.z_3Dstretch
+        sc = float(self.set.z_3Dstretch)
         zrange = np.array([np.median(self.data.z[self.data.z<0]),
                   np.median(self.data.z[self.data.z>0])])
-        zrange = list(zrange)#TODO: add option to scale zrange
+        zrange = list(zrange*5*sc)#5 works well in the datasets I had so far. That's why this is defined as a stretch factor of 1.
         if np.isnan(zrange).any():
             zrange = [0,1]
         
@@ -634,9 +643,10 @@ class MainWindow(QMainWindow):
         
         
     def execute_global_fit(self):
+            self.statusBar().showMessage('Executing Global Fit...')
 
-            if str(Path(__file__).parent.parent) not in sys.path:
-                   sys.path.append(str(Path(__file__).parent.parent))
+            # if str(Path(__file__).parent.parent) not in sys.path:
+            #        sys.path.append(str(Path(__file__).parent.parent))
             from fittoolkit import GlobalFit # This is in my private FitToolkit package
             #TODO: add option to use demo fit function if FitToolkit not available
             
@@ -650,7 +660,7 @@ class MainWindow(QMainWindow):
                     'p0': [fun_obj.p0 for fun_obj in Fun_objs],
                     'p_lower': [fun_obj.p_lower for fun_obj in Fun_objs],
                     'p_upper': [fun_obj.p_upper for fun_obj in Fun_objs],
-                    # 'common_parms': [fun_obj.common_parms for fun_obj in Fun_objs],
+                    'common_parms': [fun_obj.common_parms for fun_obj in Fun_objs],
                      }
             
             try:
@@ -664,8 +674,12 @@ class MainWindow(QMainWindow):
                 self.make_plot_kin()
                 self.make_plot_spec()
                 self.make_plot3D()
-                
+
                 self.update_results()
+                self.statusBar().showMessage('Fit finished successfully',1000)
+                self.status_label2.setText('global fit')
+                self.statusBar().showMessage('Ready...',0)
+
             except Exception as e:
                 report= ("========================================\n"
                          f"=========== Critical Error {datetime.now().strftime('%H:%M')} ==========\n"

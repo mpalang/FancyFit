@@ -37,7 +37,7 @@ if str(Path(__file__).parent.parent) not in sys.path:
 
 from utils.logger import add_logger  
 from utils.auxiliary import fancyfitSettings
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox)
+from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,Checkbox)
 
 logger = add_logger(__name__)
 import traceback
@@ -92,6 +92,10 @@ class SettingsWindow(QDialog):
         Label(layout_fit,'Fit Settings',bold=True,layout_args=(0,0))
         self.input['fit_iterations'] = Label(layout_fit,'Iterations',layout_args=(1,0))
         Spinbox(layout_fit,1,10,self.settings.fit_iterations,layout_args=(1,1))
+        Label(layout_fit,'Default Fit Method',layout_args=(2,0))
+        self.input['fit_method'] = Inputbox(layout_fit,default=self.settings.fit_method,layout_args=(2,1))
+        Label(layout_fit,'Use IRF',layout_args=(3,0))
+        self.input['use_irf'] = Checkbox(layout_fit,default=self.settings.use_irf,grid=(3,1))
         frame_fit.setLayout(layout_fit)
         main_layout.addWidget(frame_fit,0,1)
         
@@ -100,7 +104,7 @@ class SettingsWindow(QDialog):
         frame_plot.setFrameShadow(QFrame.Raised)
         layout_plot = QGridLayout()
         Label(layout_plot,'Plot Settings',bold=True,layout_args=(0,0))
-        Label(layout_plot,'z scaling for plot',layout_args=(1,0))
+        Label(layout_plot,'z 3D stretch',layout_args=(1,0))
         self.input['z_3Dstretch'] = Inputbox(layout_plot,default=str(self.settings.z_3Dstretch),layout_args=(1,1))
         Label(layout_plot,'axes break',layout_args=(2,0))
         self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
