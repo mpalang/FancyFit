@@ -121,7 +121,8 @@ class fancyfitSettings:
         self.scaling_factor_x = 1
         self.scaling_factor_y = 1
         self.fit_iterations = 3
-        self.z_scale_for_plot = 2.5
+        self.z_3Dstretch = 2.5
+        self.axes_break = 'auto'
         self.x_label = 'dt'
         self.y_label = 'wl'
         self.z_label = 'signal'
@@ -130,7 +131,9 @@ class fancyfitSettings:
         self.z_unit = '\u0394mOD'
         self.x_name = 'Kinetics'
         self.y_name = 'Spectra'
-        self.default_funs = ['exp_decay','second_order']
+        self.fit_mode = 'global'
+        self.fit_method = 'iminuit'
+        self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','Z.txt'))
         self.y_data_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))

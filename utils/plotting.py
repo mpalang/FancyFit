@@ -7,7 +7,14 @@ Created on Sat Jul  4 09:19:56 2026
 
 from matplotlib.pyplot import get_cmap
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from PySide6.QtWidgets import QSizePolicy
+from matplotlib.figure import Figure
+
 import numpy as np
+
+from utils.logger import add_logger
+logger = add_logger(__name__)
 
 
 def make_cmap(name='fancy',n_levels=40,zrange=(-1,1)):
@@ -42,209 +49,145 @@ def make_cmap(name='fancy',n_levels=40,zrange=(-1,1)):
         
     return cmap,levels
 
-def contour(x,
-             y,
-             Z,
-             xrange=None,
-             yrange=None,
-             zrange=None,
-             separate=True,
-             title=None,
-             xlabel=None,
-             ylabel=None,
-             cmap_name='fancy',
-             ):
-    """
 
+# ---------------------------
+# PLOT WIDGET WRAPPER
+# ---------------------------
 
-    Returns
-    -------
-    fig,axs
+class BaseCanvas(FigureCanvasQTAgg):
 
-    """
-    
-    # from warnings import filterwarnings
-    # filterwarnings('ignore',"_nolegend_")
-    
-    if type(x).__module__ != np.__name__:
-        x=np.arange(0,Z.shape[1],1)
+    def __init__(self, figsize = (6,4), dpi=80):
+        self.fig = Figure(figsize=figsize,
+                          dpi=dpi)
+        super().__init__(self.fig)
+        self.setSizePolicy(QSizePolicy.Expanding,
+                            QSizePolicy.Expanding
+                            )
+
+        self.axes = {'main': self.fig.add_subplot(111)}
+        self._layout = None
+
+    def clear(self):
+        self.fig.clear()
+        self.axes = {}
+        self.draw_idle()
         
-    if type(y).__module__ != np.__name__:
-        y=np.arange(0,Z.shape[0],1)
-    
-    if zrange:
-        zrange=[zrange[0],zrange[1]]
-        if zrange[0]==None:
-            zrange[0]=np.nanmin(Z)-1e-6
-        if zrange[1]==None:
-            zrange[1]=np.nanmax(Z)-1e-6
-    else:
-        zrange=[np.nanmin(Z),np.nanmax(Z)]
-       
-    cmap,levels = make_cmap(name=cmap_name,zrange=zrange)
-    
-    fig,ax=plt.subplots()
-    
-    if cmap_name=='fancy':    
-        img=ax.contourf(x,y,Z.T,levels=levels,colors=cmap,extend='both') #TODO: positive extend shows wrong color
-    else:
-        img=ax.contourf(x,y,Z.T,levels=levels,cmap=cmap,extend='both')
-    
-    ax.set_xlim(xrange)
-    ax.set_ylim(yrange)
         
-    plt.colorbar(img,anchor=(1,1))
-    
-    ax.set_ylabel(ylabel)
-    ax.set_xlabel(xlabel)
+class LineCanvas(BaseCanvas):
 
-    # plt.tick_params(axis='x', direction='in')
-    # plt.tick_params(axis='y', direction='in')
-    
-    ax.set_title(title)
-    
-    # mpl.rcParams.update(rcParams) 
-    
-    return fig,ax
-        
+    def __init__(self, layout='single',figsize=None, dpi=100):
+        super().__init__(figsize=figsize,dpi=dpi)
 
+        self.lines = {}
+        self.set_layout(layout)
 
-# =============================================================================
-# Timecontour
-# =============================================================================
+    def set_layout(self,layout):
+        if layout=='single':
+            self._layout = 'single'
+            self.clear()
+            self.axes["main"] = self.fig.add_subplot(111)
+            self.axes['main'].axhline(0,color='k',linewidth=self.axes['main'].spines['left'].get_linewidth())
+            self.draw_idle()
+        elif layout=='split':
+            self._layout = 'split'
+            self.clear()
+            gs = self.fig.add_gridspec(
+                1, 2,
+                width_ratios=(2,1),
+                wspace=0.1)
+            self.axes["main"] = self.fig.add_subplot(gs[0, 0])
+            self.axes['main'].axhline(0,color='k',linewidth=self.axes['main'].spines['left'].get_linewidth())
+            self.axes["log"] = self.fig.add_subplot(gs[0, 1])
+            self.axes['log'].axhline(0,color='k',linewidth=self.axes['log'].spines['left'].get_linewidth())
+            self.draw_idle()
 
-
-def timecontour(x,y,Z,
-              xrange=[None,None],
-              yrange=[None,None],
-              zrange=[None,None],
-              n_levels=40,
-              axis_break=1,
-              axis = 'vertical',
-              title=None,
-              zero_contour=False,
-              dpi=200):
-    
-    """
-    This function creates a nice contour plot with semi logarithmic axes and an axis break. It is designed for time-resolved spectroscopy data, where the x-axis represents wavelength, the y-axis represents time delay, and the z-axis represents signal intensity.
-    """
-        
-    if xrange[0]==None:
-        xrange[0]=np.nanmin(x)-1e-6
-    if xrange[1]==None:
-        xrange[1]=np.nanmax(x)-1e-6
-        
-    if yrange[0]==None:
-        yrange[0]=np.nanmin(y)-1e-6
-    if yrange[1]==None:
-        yrange[1]=np.nanmax(y)-1e-6
-        
-    if zrange[0]==None:
-        zrange[0]=np.nanmin(Z)-1e-6
-        if not zrange[0]:
-            zrange[0]=0
-    if zrange[1]==None:
-        zrange[1]=np.nanmax(Z)-1e-6
-        if not zrange[1]:
-            zrange[1]=1
-        
-    if axis=='vertical':
-        if not (yrange[0]<axis_break<yrange[1] and np.argmax(y>axis_break)>=2):
-            fig,ax = contour(x,y,Z,              
-                              xrange=xrange,
-                              yrange=yrange,
-                              zrange=zrange,)
-            return fig,ax
-    elif axis=='horizontal':
-        if not (xrange[0]<axis_break<xrange[1] and np.argmax(x>axis_break)>=2):
-            fig,ax = contour(x,y,Z,              
-                              xrange=xrange,
-                              yrange=yrange,
-                              zrange=zrange,)
-            return fig,ax
+    def set_line(self,name, x, y,**kwargs):
+        if name not in self.lines:
+            if self._layout=='single':
+                self.lines[name], = self.axes['main'].plot(x, y,**kwargs)
             
+            else:
+                pass        
         
-    cmap,levels = make_cmap(n_levels=n_levels,zrange=zrange)
-
-    ##############
-    ####Contour
-
-    if axis=='horizontal': 
-        ix1 = np.argmax(x>xrange[0])
-        ix2 = np.argmax(x>axis_break)
-        ix3 = np.argmax(x>xrange[1])
-        
-        fig,ax=plt.subplots(1,2,gridspec_kw={'width_ratios':[1,2],'wspace':0.012},dpi=dpi)
- 
-        ax[0].contourf(x[ix1:ix2],y,Z[ix1:ix2,:].T,
-                          levels=levels,colors=cmap,extend='both',
-                          vmin=zrange[0],vmax=zrange[1],
-                         )
+        else:
+            if self._layout=='single':
+                self.lines[name].set_data(x,y)
+                 
     
-        img=ax[1].contourf(x[ix2:ix3],y,Z[ix2:ix3,:].T,
-                          levels=levels,colors=cmap,extend='both',
-                          vmin=zrange[0],vmax=zrange[1],
-                         )
+    def clear_lines(self,name=None):
+        for line in self.lines.values():
+            line.remove()   # removes from axes
+        self.lines.clear()
+        self.draw_idle()     
+        
+        
+    def set_labels(self,xlabel,ylabel):
+        self.axes['main'].set_xlabel=xlabel
+        self.axes['main'].set_ylabel=ylabel
 
-        if zero_contour:
-            ax[0].contour(x[ix1:ix2],y,Z[ix1:ix2,:].T,
-                                     levels=[0], colors='black', linestyles=':',linewidths=1)
-            ax[1].contour(x[ix2:ix3],y,Z[ix2:ix3,:].T, 
-                                    levels=[0], colors='black', linestyles=':',linewidths=1)
+class ContourCanvas(BaseCanvas):
+    def __init__(self, layout='single',figsize=None, dpi=80):
+        super().__init__(figsize=figsize,dpi=dpi)
+        self.fig.subplots_adjust(
+                                left=0.02,
+                                right=0.98,
+                                bottom=0.02,
+                                top=0.98,
+                                wspace=0.01,
+                                hspace=0.01
+                            )
+        self.contours = {}
+        self.set_layout(layout=layout)
 
-        # ax[1].set_xscale('log')
-        # ax[1].set_yticks([])
-  
-        # ax[1].text(0.1, -0.15, 'wl/nm', va='center',transform=ax[1].transAxes)
-        # fig.colorbar(img,ax=ax[1])
-        # ax[0].set_ylabel('$\Delta$t/ps')
-        # ax[0].set_title=title
-        
-        ax[0].set_xlim((xrange[0],axis_break))
-        ax[0].set_ylim(yrange)
-        ax[1].set_xlim((axis_break,xrange[1]))
-        ax[1].set_ylim(yrange)
-        
-    elif axis=='vertical': 
-        
-        fig,ax=plt.subplots(2,1,gridspec_kw={'height_ratios':[2,1],'hspace':0.02},dpi=dpi)
-   
-        iy1 = np.argmax(y>yrange[0])
-        iy2 = np.argmax(y>axis_break)
-        iy3 = np.argmax(y>yrange[1])
+    def set_layout(self,layout='single'):
+        if layout=='single':
+            self._layout = 'single'
+            self.clear()
+            self.axes["main"] = self.fig.add_subplot(111)
 
-        ax[1].contourf(x,y[iy1:iy2],Z[:,iy1:iy2].T,
-                       levels=levels,colors=cmap,extend='both',
-                       vmin=zrange[0],vmax=zrange[1],
-                      )
+        elif layout=='split':
+            self._layout = 'split'
+            self.clear()
 
-        img=ax[0].contourf(x,y[iy2:iy3],Z[:,iy2:iy3].T,
-                           levels=levels,colors=cmap,extend='both',
-                           vmin=zrange[0],vmax=zrange[1],
-                          )
+            gs = self.fig.add_gridspec(2, 1, height_ratios=(2, 1),
+                                       hspace=0.01
+                                       )
 
-        
-        if zero_contour:
-            ax[1].contour(x, y[iy1:iy2], Z[:,iy1:iy2], 
-                                     levels=[0], colors='black', linestyles=':',linewidths=1)
-            ax[0].contour(x, y[iy2:iy3], Z[:,iy2:iy3], 
-                                    levels=[0], colors='black', linestyles=':',linewidths=1)
-        
-        fig.colorbar(img,ax=ax)
-        ax[0].set_yscale('log')
-        ax[0].set_xticks([])
-         
-        
-        # ax[0].text(-0.2, 0.2, '$\Delta$t', va='center',transform=ax[0].transAxes,rotation='vertical')
-        # ax[1].set_xlabel('wl/nm')
+            self.axes["log"] = self.fig.add_subplot(gs[0, 0])
+            self.axes["main"] = self.fig.add_subplot(gs[1, 0])
+            
+            self.axes["log"].set_yscale('log')
+            self.axes["log"].set_xticks([])
 
-        
-        # ax[0].set_title(title)
-    
-        ax[1].set_xlim(xrange)
-        ax[1].set_ylim((yrange[0],axis_break))
-        ax[0].set_xlim(xrange)
-        ax[0].set_ylim((axis_break,yrange[1]))
-    
-    
-    return fig, ax
+    def set_contour(self, x, y, Z, zrange=(-1,1), axis_break=2, **kwargs):
+        cmap,levels = make_cmap(zrange=zrange)
+        if self._layout == 'single':
+            if 'fill' in self.contours:
+                for c in self.contours['fill'].collections:
+                    c.remove()
+                    
+            if 'zero_line' in self.contours:
+                for c in self.contours['zero_line'].collections:
+                    c.remove()
+                
+            self.contours['fill'] = self.axes['main'].contourf(x, y, Z, 
+                                                           colors=cmap,levels=levels,
+                                                           extend='both')
+            
+        elif self._layout == 'split':
+            iy0 = np.argmax(y>axis_break)
+            
+            if 'fill' in self.contours:
+                self.contours['fill'].remove()
+                
+            if 'fill_log' in self.contours:
+                self.contours['fill_log'].remove()
+
+            self.contours['fill'] = self.axes['main'].contourf(x, y[:iy0], Z[:iy0,:], 
+                                                colors=cmap,levels=levels, 
+                                                extend='both')
+            
+            self.contours['fill_log'] = self.axes['log'].contourf(x, y[iy0:], Z[iy0:,:], 
+                                                colors=cmap,levels=levels, 
+                                                extend='both')
+            

@@ -31,18 +31,13 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-# from PySide6.QtGui import QFont
-
-# from PySide6.QtGui import QAction
-# from PySide6.QtCore import Qt
-
 # Add personal modules:
 if str(Path(__file__).parent.parent) not in sys.path:
       sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.logger import add_logger  
 from utils.auxiliary import fancyfitSettings
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,Spinbox)
+from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox)
 
 logger = add_logger(__name__)
 import traceback
@@ -60,6 +55,7 @@ class SettingsWindow(QDialog):
         # self.resize(500, 500)
         # self.set_defaults()
         self.settings = fancyfitSettings()
+        self.input = {}
         self.build_gui()
      except Exception as e:
          logger.error(traceback.format_exc())
@@ -81,11 +77,11 @@ class SettingsWindow(QDialog):
         layout_general = QGridLayout()
         Label(layout_general,'General Settings',bold=True,layout_args=(0,0))
         Label(layout_general,'Scaling Factor z',layout_args=(1,0))
-        Inputbox(layout_general,default=str(self.settings.scaling_factor_z),layout_args=(1,1))
+        self.input['scaling_factor_z'] = Inputbox(layout_general,default=str(self.settings.scaling_factor_z),layout_args=(1,1))
         Label(layout_general,'Scaling Factor x',layout_args=(2,0))
-        Inputbox(layout_general,default=str(self.settings.scaling_factor_x),layout_args=(2,1))
+        self.input['scaling_factor_x'] = Inputbox(layout_general,default=str(self.settings.scaling_factor_x),layout_args=(2,1))
         Label(layout_general,'Scaling Factor y',layout_args=(3,0))
-        Inputbox(layout_general,default=str(self.settings.scaling_factor_y),layout_args=(3,1))
+        self.input['scaling_factor_y'] = Inputbox(layout_general,default=str(self.settings.scaling_factor_y),layout_args=(3,1))
         frame_general.setLayout(layout_general)
         main_layout.addWidget(frame_general,0,0)
         
@@ -94,7 +90,7 @@ class SettingsWindow(QDialog):
         frame_fit.setFrameShadow(QFrame.Raised)
         layout_fit = QGridLayout()
         Label(layout_fit,'Fit Settings',bold=True,layout_args=(0,0))
-        Label(layout_fit,'Iterations',layout_args=(1,0))
+        self.input['fit_iterations'] = Label(layout_fit,'Iterations',layout_args=(1,0))
         Spinbox(layout_fit,1,10,self.settings.fit_iterations,layout_args=(1,1))
         frame_fit.setLayout(layout_fit)
         main_layout.addWidget(frame_fit,0,1)
@@ -105,7 +101,9 @@ class SettingsWindow(QDialog):
         layout_plot = QGridLayout()
         Label(layout_plot,'Plot Settings',bold=True,layout_args=(0,0))
         Label(layout_plot,'z scaling for plot',layout_args=(1,0))
-        Inputbox(layout_plot,default=str(self.settings.z_scale_for_plot),layout_args=(1,1))
+        self.input['z_3Dstretch'] = Inputbox(layout_plot,default=str(self.settings.z_3Dstretch),layout_args=(1,1))
+        Label(layout_plot,'axes break',layout_args=(2,0))
+        self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
         frame_plot.setLayout(layout_plot)
         main_layout.addWidget(frame_plot,1,0)
 
@@ -117,14 +115,14 @@ class SettingsWindow(QDialog):
         Label(layout_data,'label',layout_args=(1,1))
         Label(layout_data,'units',layout_args=(1,2))
         Label(layout_data,'x',layout_args=(2,0))
-        Inputbox(layout_data,default=self.settings.x_label,layout_args=(2,1))
-        Inputbox(layout_data,default=self.settings.x_unit,layout_args=(2,2))
+        self.input['x_label'] = Inputbox(layout_data,default=self.settings.x_label,layout_args=(2,1))
+        self.input['x_unit'] = Inputbox(layout_data,default=self.settings.x_unit,layout_args=(2,2))
         Label(layout_data,'y',layout_args=(3,0))
-        Inputbox(layout_data,default=self.settings.y_label,layout_args=(3,1))
-        Inputbox(layout_data,default=self.settings.y_unit,layout_args=(3,2))  
+        self.input['y_label'] = Inputbox(layout_data,default=self.settings.y_label,layout_args=(3,1))
+        self.input['y_unit'] = Inputbox(layout_data,default=self.settings.y_unit,layout_args=(3,2))  
         Label(layout_data,'z',layout_args=(4,0))
-        Inputbox(layout_data,default=self.settings.z_label,layout_args=(4,1))
-        Inputbox(layout_data,default=self.settings.z_unit,layout_args=(4,2))  
+        self.input['z_label'] = Inputbox(layout_data,default=self.settings.z_label,layout_args=(4,1))
+        self.input['z_unit'] = Inputbox(layout_data,default=self.settings.z_unit,layout_args=(4,2))  
         frame_data.setLayout(layout_data)
         main_layout.addWidget(frame_data,1,1)
         
@@ -133,7 +131,16 @@ class SettingsWindow(QDialog):
         
         self.setLayout(main_layout)
     
+    def read_input(self):
+        for key in self.input:
+            if isinstance(self.input[key], Inputbox):
+                self.settings.__dict__[key] = self.input[key].text()
+            elif isinstance(self.input[key], Spinbox):
+                self.settings.__dict__[key] = self.input[key].value()
+
     def on_save(self):
+        self.read_input()
+        self.settings.save()
         self.accept()
     
     def on_cancel(self):

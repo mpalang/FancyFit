@@ -10,8 +10,6 @@ import sys
 from pathlib import Path
 import numpy as np
 from datetime import datetime
-from matplotlib import pyplot as plt
-
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -38,7 +36,7 @@ if str(Path(__file__).parent.parent) not in sys.path:
 
 from utils.logger import add_logger  
 from utils.auxiliary import data_class,fancyfitSettings
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,Spinbox,
+from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
                           open_path,)
 
 logger = add_logger(__name__)
@@ -54,7 +52,7 @@ class LoadDataWindow(QDialog):
      try:
         super().__init__()
         self.setWindowTitle("Load Data")
-        # self.resize(500, 500)
+        self.resize(500, 200)
         self.set = fancyfitSettings()
         self.build_gui()
      except Exception as e:

@@ -34,7 +34,7 @@ def exp_decay_conv_gauss(t,t0,A,tau,FWHM):
 
 
 
-x = np.linspace(-0,3000,300)
+x = np.linspace(-10,300,3000)
 y = np.linspace(300,800,1000)
 
 DADS1 = gauss(y,320,-0.3,80)+gauss(y,600,0.4,300)+gauss(y,450,0.3,80)
@@ -64,7 +64,7 @@ levels = np.linspace(-0.006,0.004,20)
 fig,ax = plt.subplots()
 ax.contourf(y,x,Z.T,levels=levels)
 
-np.savetxt('Z.txt',Z)
+np.savetxt('signal.txt',Z)
 np.savetxt('t.txt',x)
 np.savetxt('wl.txt',y)
 
