@@ -186,7 +186,9 @@ class MainWindow(QMainWindow):
         self.parm_tabs.setFixedSize(250, 300)
 
         for f in self.set.default_funs:
-            self.build_parm_panel(fun_name=f)            
+            self.build_parm_panel(fun_name=f)     
+        if self.set.use_irf:
+            self.build_parm_panel(fun_name='gauss',tab_name='IRF')
         self.layout_functions.addWidget(self.parm_tabs)
         self.left_panel.addLayout(self.layout_functions)   
         
@@ -200,10 +202,13 @@ class MainWindow(QMainWindow):
         frame_left_panel.setLayout(self.left_panel)
         self.main_layout.addWidget(frame_left_panel,1)
         
-    def build_parm_panel(self,fun_name='exp_decay'):  
+        
+    def build_parm_panel(self,fun_name='exp_decay',tab_name=None):  
+            if not tab_name:
+                tab_name = 'fun'+str(self.parm_tabs.count()+1)
             self.FitFuns = FitFunctions()          
             tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
-            self.parm_tabs.addTab(tab,'fun'+str(self.parm_tabs.count()+1))
+            self.parm_tabs.addTab(tab,tab_name)
             self.relabel_tabs()
             self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
     
@@ -221,7 +226,8 @@ class MainWindow(QMainWindow):
     
     def relabel_tabs(self):
         for i in range(self.parm_tabs.count()):
-            self.parm_tabs.setTabText(i, f"fun{i+1}")
+            if not 'IRF' in self.parm_tabs.tabText(i):
+                self.parm_tabs.setTabText(i, f"fun{i+1}")
         
     def build_plot_panel(self):
         plot_tabs = QTabWidget()
@@ -652,15 +658,27 @@ class MainWindow(QMainWindow):
             
             data = self.data
             
-            Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count())]
+            irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
+            Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except IRF
            
+            funs = [fun_obj.func for fun_obj in Fun_objs]
+            parms =[fun_obj.parm_names for fun_obj in Fun_objs]
+            p0s = [fun_obj.p0 for fun_obj in Fun_objs]
+            p_lowers = [fun_obj.p_lower for fun_obj in Fun_objs]
+            p_uppers = [fun_obj.p_upper for fun_obj in Fun_objs]
+            common_parms = [fun_obj.common_parms for fun_obj in Fun_objs]
+            if irf_index:
+                IRF = self.parm_tabs.widget(irf_index[0]).values()
+                for n,fun in enumerate(funs):
+                    pass #Convolute each function with IRF!
+                
             settings={
-                    'funs': [fun_obj.func for fun_obj in Fun_objs],
-                    'parms': [fun_obj.parm_names for fun_obj in Fun_objs],
-                    'p0': [fun_obj.p0 for fun_obj in Fun_objs],
-                    'p_lower': [fun_obj.p_lower for fun_obj in Fun_objs],
-                    'p_upper': [fun_obj.p_upper for fun_obj in Fun_objs],
-                    'common_parms': [fun_obj.common_parms for fun_obj in Fun_objs],
+                    'funs': funs,
+                    'parms': parms,
+                    'p0': p0s,
+                    'p_lower': p_lowers,
+                    'p_upper': p_uppers,
+                    'common_parms': common_parms,
                      }
             
             try:
