@@ -650,9 +650,7 @@ class MainWindow(QMainWindow):
         
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
-
-            # if str(Path(__file__).parent.parent) not in sys.path:
-            #        sys.path.append(str(Path(__file__).parent.parent))
+            
             from fittoolkit import GlobalFit # This is in my private FitToolkit package
             #TODO: add option to use demo fit function if FitToolkit not available
             
@@ -667,10 +665,26 @@ class MainWindow(QMainWindow):
             p_lowers = [fun_obj.p_lower for fun_obj in Fun_objs]
             p_uppers = [fun_obj.p_upper for fun_obj in Fun_objs]
             common_parms = [fun_obj.common_parms for fun_obj in Fun_objs]
-            if irf_index:
+            
+            if irf_index and 1==0: #TODO: implement IRF handling in global fit. Currently not implemented yet because it requires a more complex handling of the parameters and the fitting function.
                 IRF = self.parm_tabs.widget(irf_index[0]).values()
+
                 for n,fun in enumerate(funs):
-                    pass #Convolute each function with IRF!
+                    fun_parms = []
+                    for parm in parms[n]:
+                        if parm in common_parms:
+                            if parm in fun_parms:
+                                continue
+                            fun_parms.append(parm)
+                        else:
+                            pass
+                        
+                    def new_fun(fun_kwargs,irf_kwargs):
+                        y_fun = fun(x,*parms)
+                        y_irf = IRF.func(x,*IRF.parm_names)
+                        return self.FitFuns.conv(y_fun,y_irf)
+
+                common_parms = list(dict.fromkeys(common_parms + IRF.parms)) # add irf parameters to common parameters, while preserving order and removing duplicates.
                 
             settings={
                     'funs': funs,

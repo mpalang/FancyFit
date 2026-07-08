@@ -133,7 +133,7 @@ class fancyfitSettings:
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
         self.fit_method = 'iminuit'
-        self.use_irf = True
+        self.use_irf = False
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','Z.txt'))
@@ -254,9 +254,12 @@ class FitFunctions:
                                       ['x0'])
 
         exp_decay = "A*exp(-(x-x0)/tau)*heaviside(x-x0,0)"
-        self.funs['exp_decay'] = fitFunction('exp_decay',exp_decay,['x0','A','tau'],
-                                      [0,1,1e7],[-1,1,1e5],[1,1,1e9],
-                                      ['x0'])
+        self.funs['exp_decay'] = fitFunction('exp_decay',exp_decay,
+                                             ['x0','A','tau'],
+                                             [0,1,1e3],
+                                             [-1,1,-np.inf],
+                                             [1,1,np.inf],
+                                             ['x0'])
         
         second_order = "heaviside((x-x0),0)*A/(1+c0*k*(x-x0))"
         self.funs['second_order'] = fitFunction('second_order',second_order,['x0','A','k','c0'],

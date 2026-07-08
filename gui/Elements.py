@@ -181,79 +181,6 @@ class Slider(QWidget):
         self.command()
            
 
-
-# def Slider(root,value_range=(0,100),command=lambda:None,label_format='plain'):
-    
-#    class slider_with_label:
-#        def __init__(self,root,value_range,label_format=label_format):
-#            self.command = command
-#            self.label_format = label_format
-#            if np.nan in value_range:
-#                value_range = (0,1)
-           
-#            slider_layout = QHBoxLayout()
-       
-#            slider = QSlider(Qt.Horizontal)
-#            slider.setRange(*value_range)
-#            slider.setValue((value_range[0]+value_range[1])/2)
-#            slider.setSingleStep(1)
-#            slider_layout.addWidget(slider)
-#            slider.valueChanged.connect(self.on_slide)
-           
-#            slider.setStyleSheet("""
-#                                 QSlider::groove:horizontal {
-#                                     border: none;
-#                                     height: 2px;
-#                                     background: gray;
-#                                 }
-                                
-#                                 QSlider::sub-page:horizontal {
-#                                     background: gray;
-#                                 }
-                                
-#                                 QSlider::add-page:horizontal {
-#                                     background: gray;
-#                                 }
-                                
-#                                 QSlider::handle:horizontal {
-#                                     background: black;
-#                                     width: 5px;
-#                                     margin: -6px 0;
-#                                 }
-                                
-#                                 """)
-            
-            
-
-#            label = QLabel(self.format_value(slider.value()))
-           
-#            self.slider = slider
-#            self.label = label
-           
-#            self.label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-#            self.slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-           
-#            slider_layout.addWidget(self.slider)
-#            slider_layout.addWidget(self.label)
-    
-#            root.addLayout(slider_layout)
-           
-#        def format_value(self,number):
-#          if self.label_format == "sci":
-#              return f"{number:.2e}"
-#          else:
-#              return str(number) 
-         
-#        def on_slide(self):
-#           self.command()
-#           self.label.setText(self.format_value(self.slider.value()))
-                
-
-           
-#    w = slider_with_label(root,value_range)
-           
-#    return w
-
 class ParmRow(QWidget):
     def __init__(self,name,p0,p_lower,p_upper):
         super().__init__()
@@ -299,13 +226,10 @@ class ParmRow(QWidget):
                 self.setStyleSheet("background:#ffcccc;")
                 return False
         except Exception as e:
-            self.setStyleSheet("background:#ffcccc;")
             # logger.error(f'Problem with parameter input:\n {e}') #can activate for debugging. Otherwise it would write too much if user is typing.
             raise ValueError(f'Make sure you only put in numbers:\n {e}')
             return False
-
-
-        
+  
     def values(self):
         if self.validate():
             name = self.name_input.text()
