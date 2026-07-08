@@ -261,14 +261,29 @@ class ParmRow(QWidget):
                            QSizePolicy.Policy.Expanding)
         layout = QHBoxLayout(self)
         self.name_input = Inputbox(layout,default=name)
-        self.p0_input = Inputbox(layout,default=p0)
-        self.p_lower_input = Inputbox(layout,default=p_lower)
-        self.p_upper_input = Inputbox(layout,default=p_upper)
+        self.p0_input = Inputbox(layout,default=str(p0))
+        self.p_lower_input = Inputbox(layout,default=str(p_lower))
+        self.p_upper_input = Inputbox(layout,default=str(p_upper))
                  
-        # self.p0_input.textChanged.connect(self.validate)
-        # self.p_lower_input.textChanged.connect(self.validate)
-        # self.p_upper_input.textChanged.connect(self.validate)
+        self.p0_input.textChanged.connect(self.validate_on_the_fly)
+        self.p_lower_input.textChanged.connect(self.validate_on_the_fly)
+        self.p_upper_input.textChanged.connect(self.validate_on_the_fly)
         
+    def validate_on_the_fly(self):
+        try:
+            ok = (
+                float(self.p_lower_input.text())
+                <= float(self.p0_input.text())
+                <= float(self.p_upper_input.text())
+                )
+            if ok:
+               self.setStyleSheet("")
+               return True
+            else:
+                self.setStyleSheet("background:#ffcccc;")
+                return False
+        except:
+            pass #We don't need to do anything here yet...otherwise too many errors are raised.
         
     def validate(self):
         try:

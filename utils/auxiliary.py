@@ -133,7 +133,7 @@ class fancyfitSettings:
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
         self.fit_method = 'iminuit'
-        self.use_irf = False
+        self.use_irf = True
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','Z.txt'))
@@ -185,6 +185,16 @@ class FitFunctions:
                 QStandardPaths.StandardLocation.AppLocalDataLocation))
         self.functions_file = self.user_dir / 'FitFunctions.json'
         self.funs={}
+        
+        def conv(y, yc):
+            yc = np.asarray(yc, dtype=float)
+            yc = yc / np.sum(yc) #normalize convolution function
+            y_conv = np.convolve(y, yc, mode="full")
+            # center kernel
+            k = len(yc) // 2
+            return y_conv[k:k + len(y)]
+        self.conv = conv
+        
         self.load()
 #             
     def from_dict(self,funs):
@@ -192,6 +202,7 @@ class FitFunctions:
             self.funs[name] = fitFunction(name,value['expr'],value['parm_names'],
                               value['p0'],value['p_lower'],value['p_upper'],
                               value['common_parms'])
+            # self.__dict__.setdefault(name,self.funs[name]) #I think I want to change the architecture here. See if that makes sense with how functions are called. Just make sure all old references in the code are replaced before removing the old .funs['funname'] structure
                 
     def names(self):
         return list(self.funs.keys())
@@ -223,17 +234,9 @@ class FitFunctions:
             
         with open(self.functions_file, 'w') as f:
             json.dump(out_dict,f,indent=4)
-            
+    
+
     def default(self):
-        
-        def conv(y, yc):
-            yc = np.asarray(yc, dtype=float)
-            yc = yc / np.sum(yc) #normalize convolution function
-            y_conv = np.convolve(y, yc, mode="full")
-            # center kernel
-            k = len(yc) // 2
-            return y_conv[k:k + len(y)]
-        setattr(self,'conv',conv)
         
         gauss = "A/(s*sqrt(2*pi))*exp(-(x-x0)**2/(2*s**2))"
         self.funs['gauss'] = fitFunction('gauss',gauss,['x0','A','s'],
