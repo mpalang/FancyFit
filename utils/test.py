@@ -4,38 +4,52 @@ Created on Fri Jul  3 19:12:09 2026
 
 @author: morit
 """
-
-from auxiliary import FitFunctions
+from pathlib import Path
+import sys
+if str(Path(__file__).parent.parent) not in sys.path:
+   sys.path.append(str(Path(__file__).parent.parent)) 
+from utils.auxiliary import FitFunctions
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.signal import convolve
+from fittoolkit import GlobalFit
+from numpy.linalg import inv
+from iminuit import Minuit as Mi
 
 ff = FitFunctions()
 ff.default()
 
 
-def conv(y, yc):
-    yc = np.asarray(yc, dtype=float)
-    yc = yc / np.sum(yc)
 
-    y_conv = np.convolve(y, yc, mode="full")
-
-    # center kernel
-    k = len(yc) // 2
-
-    return y_conv[k:k + len(y)]
-
-x = np.linspace(-100,100,2000)
-y = ff.funs['exp_decay'].func(x,0,1,20)
-y2 = ff.funs['gauss'].func(x,0,1,1)
-y3 = ff.funs['dgauss'].func(x,0,1,1)
-y4 = ff.funs['d2gauss'].func(x,0,1,1)
-y6 = conv(y,y2)
+base = Path(__file__).parent.parent/'Test Data'
+t = np.genfromtxt(Path(base)/'x.txt')
+wl = np.genfromtxt(Path(base)/'y.txt')
+s = np.genfromtxt(Path(base)/'z.txt')
 
 
+#%%
 
-fig,ax = plt.subplots()
+
+# x = np.linspace(-100,100,2000)
+# y = settings['funs'][0](x,*pfit)
+
+
+# fig,ax = plt.subplots()
 # ax.plot(x,y)
-ax.plot(x,y3)
-ax.plot(x,y6)
 
+
+
+#%%
+
+# funobj = ff.funs['exp_decay']
+# settings={
+#         'funs': [funobj.func],
+#         'parms': [funobj.parm_names],
+#         'p0': [[-1,1,1]],
+#         'p_lower': [[-1,1,0]],
+#         'p_upper': [[-1,1,np.inf]],
+#         'common_parms': funobj.common_parms,
+#          }
+
+# gf = GlobalFit(t,wl,s,settings=settings) 
+# pfit = gf.p[0]

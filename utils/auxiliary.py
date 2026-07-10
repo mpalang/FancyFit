@@ -4,6 +4,12 @@ Created on Sat Jun 20 23:58:36 2026
 
 @author: morit
 """
+
+# Is this helpful to keep the user folder the same if executed in test e.g.?
+from PySide6.QtCore import QCoreApplication
+QCoreApplication.setOrganizationName("SmoereApps")
+QCoreApplication.setApplicationName("FancyFit")
+
 from PySide6.QtCore import QStandardPaths
 import json
 from dataclasses import dataclass
