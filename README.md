@@ -10,7 +10,7 @@ This is a beta version and still needs a lot of work. Not all functions are (ful
 
 
 
-Data import is limited to three separate files for x,y and Z so far. 
+Data import is limited to three separate files for x,y and Z so far.
 
 You can build your own function by using plain text in the "FunctionBuilder". Sympy is used to convert the text into python code.
 
@@ -24,7 +24,7 @@ The bundled .exe should work regardless.
 
 Bundle as windows .exe:
 
-pyinstaller --windowed --icon=icon.ico --distpath WindowsApp --workpath build  --name FancyFit main.py --collect-all scipy
+pyinstaller --windowed --icon=icon.ico --distpath WindowsApp --workpath build  --name FancyFit main.py
 
 Find out why scipy doesn't import everything necessary on its own now! (Didn't have that issue before)
 

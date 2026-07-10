@@ -331,14 +331,15 @@ class MainWindow(QMainWindow):
 
     def update_results(self):
             p_dict = self.gf.p_dict
-            errors = self.gf.m.errors
-            scf = self.gf.scaling_factors
+            # errors = self.gf.m.errors
+            # scf = self.gf.scaling_factors
             m = self.gf.m
             
             fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
             funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
             params_text = "\n".join(
-                f"{parm:<8s} = {p_dict[parm]:>12.2g} ± {errors[parm]*scf[parm]:>12.2g}"
+                # f"{parm:<8s} = {p_dict[parm]:>12.2g} ± {errors[parm]*scf[parm]:>12.2g}"
+                f"{parm:<8s} = {p_dict[parm]:>12.2g}"
                 for parm in p_dict.keys())
 
             fmin_text = (
@@ -416,7 +417,7 @@ class MainWindow(QMainWindow):
             self.ycut_low.setText(str(np.floor(min(self.data.y))))
             self.ycut_high.setText(str(np.ceil(max(self.data.y))))
 
-            self.status_label1.setText(f'Data Loaded: {len(self.data.x)} x points, {len(self.data.y)} y points and {str(len(self.data.y)).replace(',','x')} z points')
+            self.status_label1.setText(f'Data Loaded: {len(self.data.x)} x points, {len(self.data.y)} y points and {str(self.data.z.shape).replace(',','x')} z points')
         
         except Exception as e:
             logger.exception('Error Loading Data')
@@ -617,96 +618,86 @@ class MainWindow(QMainWindow):
     # =============================================================================
     # Fit Functions and Classes:
     # =============================================================================
-   
-    def get_funs(self):
-        funs=[]
-        for n in range(self.parm_tabs.count()):
-            funs.append(self.FitFuns[self.funs_input[n].currentText()]['fun'])
-        return funs
+    
+    def convolute_functions(self,FunObjs,IRF):
+        return FunObjs
+        """f: functions, p: parm names, p0: initial guesses, pl: lower boundaries, p: upper boundaries, cp: common parameters"""
+        funs = [fun_obj.func for fun_obj in FunObjs]
+        parms =[fun_obj.parm_names for fun_obj in FunObjs]
+        p0 = [fun_obj.p0 for fun_obj in FunObjs]
+        pl = [fun_obj.p_lower for fun_obj in FunObjs]
+        pu = [fun_obj.p_upper for fun_obj in FunObjs]
+        cp = [fun_obj.common_parms for fun_obj in FunObjs]
         
-    def get_parms(self):
-        Parms=[]
-        P0=[]
-        P_lower=[]
-        P_upper=[]
-        
-        for n in range(self.parm_tabs.count()):
-            parms=[]
-            p0=[]
-            p_lower=[]
-            p_upper=[]
-            for m in range(len(self.parms_input[n])):
-                parms.append(self.parms_input[n][m].text())
-                p0.append(float(self.p0_input[n][m].text()))
-                p_lower.append(float(self.p_lower_input[n][m].text()))
-                p_upper.append(float(self.p_upper_input[n][m].text()))
-            Parms.append(parms)
-            P0.append(p0)
-            P_lower.append(p_lower)
-            P_upper.append(p_upper)
-        
-        return Parms,P0,P_lower,P_upper
-        
-        
+        for n,fobj in enumerate(FunObjs):
+            fun_parms = fobj.parm_names
+            cp = self.common_parms_input.text().replace(' ','').split(',')
+            for parm in fobj.parm_names:
+                if parm in cp:
+                    if parm in fun_parms:
+                        continue
+                    fun_parms.append(parm)
+                else:
+                    pass
+                        
+            def new_fun(x,fun_kwargs,irf_kwargs):
+                y_fun = fobj.func(x,*parms)
+                y_irf = IRF.func(x,*IRF.parm_names)
+                return self.FitFuns.conv(y_fun,y_irf)
+
+        # common_parms = list(dict.fromkeys(common_parms + IRF.parms)) # add irf parameters to common parameters, while preserving order and removing duplicates.
+                
+
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
             
             from fittoolkit import GlobalFit # This is in my private FitToolkit package
             #TODO: add option to use demo fit function if FitToolkit not available
             
-            data = self.data
-            
+            # Prepare data and settings for global fit
             irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
-            Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except IRF
-           
-            funs = [fun_obj.func for fun_obj in Fun_objs]
-            parms =[fun_obj.parm_names for fun_obj in Fun_objs]
-            p0s = [fun_obj.p0 for fun_obj in Fun_objs]
-            p_lowers = [fun_obj.p_lower for fun_obj in Fun_objs]
-            p_uppers = [fun_obj.p_upper for fun_obj in Fun_objs]
-            common_parms = [fun_obj.common_parms for fun_obj in Fun_objs]
+            data = self.data
+            Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except 
             
-            if irf_index and 1==0: #TODO: implement IRF handling in global fit. Currently not implemented yet because it requires a more complex handling of the parameters and the fitting function.
+            # Convolute if IRF function is 
+            if irf_index or 1==0: # doesn't work yet
                 IRF = self.parm_tabs.widget(irf_index[0]).values()
+                funs,parms,p0,pl,pu,cp = self.convolute_functions(Fun_objs,IRF)
 
-                for n,fun in enumerate(funs):
-                    fun_parms = []
-                    for parm in parms[n]:
-                        if parm in common_parms:
-                            if parm in fun_parms:
-                                continue
-                            fun_parms.append(parm)
-                        else:
-                            pass
-                        
-                    def new_fun(fun_kwargs,irf_kwargs):
-                        y_fun = fun(x,*parms)
-                        y_irf = IRF.func(x,*IRF.parm_names)
-                        return self.FitFuns.conv(y_fun,y_irf)
+            else:
+                funs = [fun_obj.func for fun_obj in Fun_objs]
+                parms =[fun_obj.parm_names for fun_obj in Fun_objs]
+                p0 = [fun_obj.p0 for fun_obj in Fun_objs]
+                pl = [fun_obj.p_lower for fun_obj in Fun_objs]
+                pu = [fun_obj.p_upper for fun_obj in Fun_objs]
+                cp = self.common_parms_input.text().replace(' ','').split(',')
 
-                common_parms = list(dict.fromkeys(common_parms + IRF.parms)) # add irf parameters to common parameters, while preserving order and removing duplicates.
-                
+            # Prepare settings for global fit
             settings={
                     'funs': funs,
                     'parms': parms,
-                    'p0': p0s,
-                    'p_lower': p_lowers,
-                    'p_upper': p_uppers,
-                    'common_parms': common_parms,
+                    'p0': p0,
+                    'p_lower': pl,
+                    'p_upper': pu,
+                    'common_parms': cp,
                      }
             
             try:
-                self.gf = GlobalFit(data.x,data.y,data.z.T,settings=settings)       
+                self.gf = GlobalFit(data.x,data.y,data.z.T,settings=settings)     
+                
+                # Unpack results
                 self.data.x_fit = self.gf.x
                 self.data.y_fit = self.gf.y
                 self.data.z_fit = self.gf.Z_fit.T
                 self.data.DADS = self.gf.DADS.T
                 self.data.residuum = self.gf.residuum.T
                 
+                # Make Plots
                 self.make_plot_kin()
                 self.make_plot_spec()
                 self.make_plot3D()
 
+                # Print Results in Prompt Box
                 self.update_results()
                 self.statusBar().showMessage('Fit finished successfully',1000)
                 self.status_label2.setText('global fit')

@@ -88,21 +88,21 @@ class LoadDataWindow(QDialog):
     
         frame_action = QFrame()
         layout_action = QHBoxLayout()
-        Button(layout_action,'Load',command=self.on_save)
+        Button(layout_action,'Load',command=self.on_load)
         Button(layout_action,'Cancel',command=self.on_cancel)
         frame_action.setLayout(layout_action)
         main_layout.addWidget(frame_action)
         
         self.setLayout(main_layout)
     
-    def on_save(self):
-        x_path = self.x_path.input_path
+    def on_load(self):
+        x_path = self.x_path.entry_inputpath.text()
         x = np.genfromtxt(x_path)
         self.set.x_data_path = x_path
-        y_path = self.y_path.input_path
+        y_path = self.y_path.entry_inputpath.text()
         y = np.genfromtxt(y_path)
         self.set.y_data_path = y_path
-        z_path = self.z_path.input_path
+        z_path = self.z_path.entry_inputpath.text()
         z = np.genfromtxt(z_path)
         self.set.z_data_path = z_path
         
