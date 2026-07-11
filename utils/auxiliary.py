@@ -14,12 +14,15 @@ from PySide6.QtCore import QStandardPaths
 import json
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 import sympy as sp
 import numpy as np
 from copy import deepcopy
 
 # Add personal modules:
+if str(Path(__file__).parent.parent) not in sys.path:
+    sys.path.append(str(Path(__file__).parent.parent))
 from utils.logger import add_logger  
 logger = add_logger(__name__)
 

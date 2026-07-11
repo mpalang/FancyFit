@@ -165,7 +165,7 @@ class MainWindow(QMainWindow):
         Label(layout_fitsettings,'Mode',layout_args=(0,0))
         Dropdown(layout_fitsettings,['Global','Simple'],layout_args=(0,1))
         Label(layout_fitsettings,'Method',layout_args=(1,0))
-        Dropdown(layout_fitsettings,['iminuit','others...'],layout_args=(1,1))
+        self.method_input = Dropdown(layout_fitsettings,['migrad','L-BFGS-B','TNC','COBYLA','SLSQP','trust-constr','CG','Powell','BFGS',],standard='Powell',layout_args=(1,1))
 
         frame_fitsettings.setLayout(layout_fitsettings)
         self.left_panel.addWidget(frame_fitsettings)
@@ -331,15 +331,13 @@ class MainWindow(QMainWindow):
 
     def update_results(self):
             p_dict = self.gf.p_dict
-            # errors = self.gf.m.errors
-            # scf = self.gf.scaling_factors
+            errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
             m = self.gf.m
             
             fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
             funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
             params_text = "\n".join(
-                # f"{parm:<8s} = {p_dict[parm]:>12.2g} ± {errors[parm]*scf[parm]:>12.2g}"
-                f"{parm:<8s} = {p_dict[parm]:>12.2g}"
+                f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include error
                 for parm in p_dict.keys())
 
             fmin_text = (
@@ -680,6 +678,7 @@ class MainWindow(QMainWindow):
                     'p_lower': pl,
                     'p_upper': pu,
                     'common_parms': cp,
+                    'method': self.method_input.currentText(),
                      }
             
             try:
