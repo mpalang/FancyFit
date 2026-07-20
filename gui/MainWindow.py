@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
             fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
             funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
             params_text = "\n".join(
-                f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include error
+                f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include errors in the report
                 for parm in p_dict.keys())
 
             fmin_text = (
