@@ -1,19 +1,1 @@
 Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!
-====================
-|| FIT RESULTS 16:53 ||
-====================
-
-fun1: exp_decay; fun2: exp_decay
-Parameters:
-fun1_x0  =        -0.85 ±        0.001
-fun1_A   =            1 ±         0.01
-fun1_tau =        6e+08 ±      1.3e-15
-fun2_x0  =        -0.89 ±      1.7e-06
-fun2_A   =            1 ±         0.01
-fun2_tau =        1e+09 ±      6.7e-15
-
-=== FMIN INFO ===
-FCN (min value): 1.55769
-EDM: 5.304e-02
-Valid minimum: False
-Converged: False
