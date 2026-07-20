@@ -16,7 +16,7 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 import warnings
 
-
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -37,12 +37,12 @@ if str(Path(__file__).parent.parent) not in sys.path:
       sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.logger import add_logger  
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,MplCanvas,Textbox,Label,Spinbox,
+from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
                           ParmRow)
 from utils.auxiliary import FitFunctions, fitFunction
+from utils.plotting import LineCanvas
 
 logger = add_logger(__name__)
-import traceback
   
 # =============================================================================
 # =============================================================================
@@ -54,6 +54,8 @@ class FunctionBuilder(QDialog):
      # try:
         super().__init__()
         self.setWindowTitle("FunctionBuilder")
+        icon_path = Path(Path(__file__).parent,'Function_Icon.ico')
+        self.setWindowIcon(QIcon(str(icon_path)))
         # self.resize(500, 500)
         # self.set_defaults()
         self.parms=[]
@@ -63,7 +65,7 @@ class FunctionBuilder(QDialog):
         self.FitFuncs = FitFunctions()
         self.build_gui()
      # except Exception as e:
-     #     logger.error(traceback.format_exc())
+     #     logger.exception()
      #     QMessageBox.critical(self,'error',f'Fatal Error in {__name__}: {e}')
 
 # =============================================================================
@@ -122,10 +124,9 @@ class FunctionBuilder(QDialog):
         plot_layout.addWidget(test_inputs_frame)
 
         Button(plot_layout,'Test Data',command=self.test_data)
-        self.plot = MplCanvas()
-        self.plot.ax.axhline(0,color='k',linewidth=self.plot.ax.spines['left'].get_linewidth())
+        self.plot = LineCanvas()
         plot_layout.addWidget(self.plot)
-        self.lines = self.plot.ax.plot([None],[None],[None],[None],[None],[None])
+        self.lines = self.plot.axes['main'].plot([None],[None],[None],[None],[None],[None])
         
         plot_frame.setLayout(plot_layout)
         main_layout.addWidget(plot_frame,0,2,2,1)
@@ -166,8 +167,8 @@ class FunctionBuilder(QDialog):
                 for n,y in enumerate([y0,ylower,yupper]):
                     self.lines[n].set_xdata(x)
                     self.lines[n].set_ydata(y)
-                self.plot.ax.relim()
-                self.plot.ax.autoscale_view()
+                self.plot.axes['main'].relim()
+                self.plot.axes['main'].autoscale_view()
                 self.plot.draw()
 
             # except FloatingPointError as e:

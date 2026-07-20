@@ -17,6 +17,7 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -52,6 +53,9 @@ class SettingsWindow(QDialog):
      try:
         super().__init__()
         self.setWindowTitle("Settings")
+        icon_path = Path(Path(__file__).parent,'Settings_Icon.ico')
+        self.setWindowIcon(QIcon(str(icon_path)))
+        self.setWindowIcon(QIcon(str(icon_path)))
         # self.resize(500, 500)
         # self.set_defaults()
         self.settings = fancyfitSettings()

@@ -8,6 +8,7 @@ from PySide6.QtCore import QStandardPaths
 from logging.handlers import RotatingFileHandler
 import logging
 from pathlib import Path
+from functools import wraps
 
 class MaxLevelFilter(logging.Filter):
     """Allows only records below a certain level."""
@@ -67,3 +68,4 @@ def setup_logger():
 def add_logger(name):
     # if name not in logging.root.manager.loggerDict.keys():
     return logging.getLogger(name)
+

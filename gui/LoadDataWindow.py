@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-# from PySide6.QtGui import QFont
+from PySide6.QtGui import QIcon
 
 # from PySide6.QtGui import QAction
 from PySide6.QtCore import Signal
@@ -52,6 +52,8 @@ class LoadDataWindow(QDialog):
      try:
         super().__init__()
         self.setWindowTitle("Load Data")
+        icon_path = Path(Path(__file__).parent,'Load_Icon.ico')
+        self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(500, 200)
         self.set = fancyfitSettings()
         self.build_gui()
