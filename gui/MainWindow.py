@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QFont, QIcon
 
 from PySide6.QtGui import QAction
-# from PySide6.QtCore import Qt
+from PySide6.QtCore import QThread
 
 # Add personal modules:
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,Label,ParmsPanel)
@@ -38,6 +38,7 @@ from gui import __version__
 from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 from utils.plotting import LineCanvas,ContourCanvas
+from utils.fit import GlobalFitWorker
 logger = add_logger(__name__)
 import traceback
   
@@ -326,42 +327,7 @@ class MainWindow(QMainWindow):
                 self.parm_tabs.setTabText(n,'fun'+str(n+1))
                 
         else:
-            QMessageBox.warning(self,"Cannot close tab","Can't remove last component...")
-            
-
-    def update_results(self):
-            p_dict = self.gf.p_dict
-            errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
-            m = self.gf.m
-            
-            fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
-            funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
-            params_text = "\n".join(
-                f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include errors in the report
-                for parm in p_dict.keys())
-
-            fmin_text = (
-                    f"FCN (min value): {m.fval:.6g}\n"
-                    f"EDM: {m.fmin.edm:.3e}\n"
-                    f"Valid minimum: {m.fmin.is_valid}\n"
-                    f"Converged: {m.valid}\n"
-                )
-            report = (
-                "====================\n"
-                f"|| FIT RESULTS {datetime.now().strftime('%H:%M')} ||\n"
-                "====================\n\n"
-                f"{funs_text}\n"
-                "Parameters:\n"
-                f"{params_text}\n\n"
-                "=== FMIN INFO ===\n"
-                f"{fmin_text}"
-                )
-            
-            self.results_box.append(report)
-            self.results_box.verticalScrollBar().setValue(
-            self.results_box.verticalScrollBar().maximum()
-            )
-            
+            QMessageBox.warning(self,"Cannot close tab","Can't remove last component...")           
             
     def exit_app(self):
         logger.info('Closing Main Window')
@@ -644,73 +610,129 @@ class MainWindow(QMainWindow):
                 return self.FitFuns.conv(y_fun,y_irf)
 
         # common_parms = list(dict.fromkeys(common_parms + IRF.parms)) # add irf parameters to common parameters, while preserving order and removing duplicates.
-                
+        
+    def prepare_fit(self):
+        # Prepare data and settings for global fit
+        irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
+        data = self.data
+        Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except 
+        
+        # Convolute if IRF function is 
+        if irf_index or 1==0: # doesn't work yet
+            IRF = self.parm_tabs.widget(irf_index[0]).values()
+            funs,parms,p0,pl,pu,cp = self.convolute_functions(Fun_objs,IRF)
 
+        else:
+            funs = [fun_obj.func for fun_obj in Fun_objs]
+            parms =[fun_obj.parm_names for fun_obj in Fun_objs]
+            p0 = [fun_obj.p0 for fun_obj in Fun_objs]
+            pl = [fun_obj.p_lower for fun_obj in Fun_objs]
+            pu = [fun_obj.p_upper for fun_obj in Fun_objs]
+            cp = self.common_parms_input.text().replace(' ','').split(',')
+
+        # Prepare settings for global fit
+        settings={
+                'funs': funs,
+                'parms': parms,
+                'p0': p0,
+                'p_lower': pl,
+                'p_upper': pu,
+                'common_parms': cp,
+                'method': self.method_input.currentText(),
+                 }
+        
+        return data.x, data.y, data.z.T, settings
+
+    def update_fit_progress(self,progress):
+        if isinstance(progress,str):
+            # self.statusBar().showMessage(f'Executing Global Fit: {progress}')
+            pass
+        elif type(progress).__name__=='FitProgress':
+            #progress is in type of fitpgrogress class with attributes chi2, parameters, iteration, total_iterations
+            report = f'Iter.{progress.iteration}/{progress.total_iterations} with chi2={progress.chi2:.3f}'
+            self.statusBar().showMessage(f'Executing Global Fit: {report}')
+    
+    def update_results(self):
+            p_dict = self.gf.p_dict
+            errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
+            m = self.gf.m
+            
+            fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
+            funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
+            params_text = "\n".join(
+                f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include errors in the report
+                for parm in p_dict.keys())
+
+            fmin_text = (
+                    f"FCN (min value): {m.fval:.6g}\n"
+                    f"EDM: {m.fmin.edm:.3e}\n"
+                    f"Valid minimum: {m.fmin.is_valid}\n"
+                    f"Converged: {m.valid}\n"
+                )
+            report = (
+                "====================\n"
+                f"|| FIT RESULTS {datetime.now().strftime('%H:%M')} ||\n"
+                "====================\n\n"
+                f"{funs_text}\n"
+                "Parameters:\n"
+                f"{params_text}\n\n"
+                "=== FMIN INFO ===\n"
+                f"{fmin_text}"
+                )
+            
+            self.results_box.append(report)
+            self.results_box.verticalScrollBar().setValue(
+            self.results_box.verticalScrollBar().maximum()
+            )
+    
+    def fit_finished(self,result):
+        self.gf = result
+        self.thread.quit()
+        self.thread.wait()
+    
+        # Unpack results. gf is added in self.fit_finished after thread is done.
+        self.data.x_fit = self.gf.x
+        self.data.y_fit = self.gf.y
+        self.data.z_fit = self.gf.Z_fit.T
+        self.data.DADS = self.gf.DADS.T
+        self.data.residuum = self.gf.residuum.T
+        
+        # Make Plots
+        self.make_plot_kin()
+        self.make_plot_spec()
+        self.make_plot3D()
+
+        # Print Results in Prompt Box
+        self.update_results()
+        self.statusBar().showMessage('Fit finished successfully',1000)
+        self.status_label2.setText('global fit')
+        self.statusBar().showMessage('Ready...',0)
+    
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
             
-            from fittoolkit import GlobalFit # This is in my private FitToolkit package
-            #TODO: add option to use demo fit function if FitToolkit not available
-            
-            # Prepare data and settings for global fit
-            irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
-            data = self.data
-            Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except 
-            
-            # Convolute if IRF function is 
-            if irf_index or 1==0: # doesn't work yet
-                IRF = self.parm_tabs.widget(irf_index[0]).values()
-                funs,parms,p0,pl,pu,cp = self.convolute_functions(Fun_objs,IRF)
+            x,y,z,settings = self.prepare_fit()
 
-            else:
-                funs = [fun_obj.func for fun_obj in Fun_objs]
-                parms =[fun_obj.parm_names for fun_obj in Fun_objs]
-                p0 = [fun_obj.p0 for fun_obj in Fun_objs]
-                pl = [fun_obj.p_lower for fun_obj in Fun_objs]
-                pu = [fun_obj.p_upper for fun_obj in Fun_objs]
-                cp = self.common_parms_input.text().replace(' ','').split(',')
-
-            # Prepare settings for global fit
-            settings={
-                    'funs': funs,
-                    'parms': parms,
-                    'p0': p0,
-                    'p_lower': pl,
-                    'p_upper': pu,
-                    'common_parms': cp,
-                    'method': self.method_input.currentText(),
-                     }
+            self.thread = QThread()
             
-            try:
-                self.gf = GlobalFit(data.x,data.y,data.z.T,settings=settings)     
+            self.worker = GlobalFitWorker(
+                x,y,z,settings=settings)
+            
+            self.worker.moveToThread(self.thread)
+            
+            self.thread.started.connect(self.worker.run)
+            
+            self.worker.progress.connect(
+                self.update_fit_progress
+            )
+            
+            self.worker.finished.connect(
+                self.fit_finished
+            )
+            
+            self.thread.start()
                 
-                # Unpack results
-                self.data.x_fit = self.gf.x
-                self.data.y_fit = self.gf.y
-                self.data.z_fit = self.gf.Z_fit.T
-                self.data.DADS = self.gf.DADS.T
-                self.data.residuum = self.gf.residuum.T
-                
-                # Make Plots
-                self.make_plot_kin()
-                self.make_plot_spec()
-                self.make_plot3D()
 
-                # Print Results in Prompt Box
-                self.update_results()
-                self.statusBar().showMessage('Fit finished successfully',1000)
-                self.status_label2.setText('global fit')
-                self.statusBar().showMessage('Ready...',0)
-
-            except Exception as e:
-                report= ("========================================\n"
-                         f"=========== Critical Error {datetime.now().strftime('%H:%M')} ==========\n"
-                         "========================================\n\n"
-                         f"Error in global fit: {type(e).__name__}: {e}")
-                self.results_box.append(report)
-                logger.error(traceback.format_exc())
-            
-    
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 # ---------------------------

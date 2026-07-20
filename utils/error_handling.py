@@ -1,4 +1,4 @@
-coding: utf-8 -*-
+#coding: utf-8 -*-
 """
 Created on Thu Jul 17 15:00:00 2026
 
@@ -6,6 +6,7 @@ Created on Thu Jul 17 15:00:00 2026
 """
 import traceback
 from PySyde6.QtWidgets import QMessageBox
+
 
 class ErrorBox(QMessageBox):
     def __init__(self, title, message, details=None,parent=None):
@@ -19,13 +20,14 @@ class ErrorBox(QMessageBox):
         self.exec()
 
 
-def error_handler(func):
-    """Decorator to handle exceptions in GUI Window."""
-    @wraps
-    def wrapper(*args, **kwargs):
-        try:
-            return func(self,*args, **kwargs)
-        except Exception as e:
-            logger.exception(f"Exception in {func.__name__}: {e}")
-            QMessageBox.critical(self,'error',f'Fatal Error in {func.__name__}:\n {e}',traceback.format_exc())
-
+# def error_handler(func):
+#     """Decorator to handle exceptions in GUI Window."""
+#     @wraps
+#     def wrapper(*args, **kwargs):
+#         try:
+#             return func(self,*args, **kwargs)
+#         except Exception as e:
+#             logger.exception(f"Exception in {func.__name__}: {e}")
+#             QMessageBox.critical(self,'error',f'Fatal Error in {func.__name__}:\n {e}',traceback.format_exc())
+    
+#     return wrapper
