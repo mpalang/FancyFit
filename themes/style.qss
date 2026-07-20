@@ -1,0 +1,54 @@
+QMainWindow, QDialog {
+    background-color: rgb(195, 195, 230);
+    color: black;
+}
+
+QMenuBar {
+    color: black;
+    font-size: 18px;
+}
+
+QMenu {
+    color: black;
+    font-size: 14px;
+}
+
+QFrame {
+    background-color: rgb(195, 195, 230);
+    color: black;
+    border-width: 2px;
+    border-style: solid;
+    border-color: rgb(140, 140, 210);
+}
+
+QTextEdit {
+    background-color: white;
+    color: black;
+}
+
+FigureCanvasQTAgg {
+    background-color: rgb(195,195,230);
+}
+
+QTabWidget::pane {
+    border: 1px solid rgb(180, 180, 180);
+    background: white;
+}
+
+QTabBar::tab {
+    background: rgb(230, 230, 230);
+    color: black;
+    padding: 8px 15px;
+    font-size: 12px;
+    border: 1px solid rgb(180, 180, 180);
+    border-bottom: none;
+}
+
+QTabBar::tab:selected {
+    background: white;
+    color: black;
+}
+
+QTabBar::tab:hover {
+    background: rgb(210, 210, 210);
+}

@@ -21,21 +21,10 @@ if __name__=='__main__':
     logger = add_logger(__name__)
     
     app = QApplication(sys.argv)
-    app.setStyleSheet("""
-        QMainWindow, QDialog {
-                                background-color: rgb(195, 195, 230);
-                                color: black;
-        }
-        QMenuBar {
-                    color: black;
-                    font-size: 18px;
-        }
-
-        QMenu {
-                    color: black;
-                    font-size: 14px;
-        }
-        """)
+    
+    if Path('utils/theme.qss').exists():
+        with open(Path('utils/theme.qss'), "r") as f:
+            app.setStyleSheet(f.read())
     
     icon_path = Path(Path(__file__).parent,'icon.ico')
     app.setWindowIcon(QIcon(str(icon_path)))

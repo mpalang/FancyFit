@@ -39,7 +39,7 @@ from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 from utils.plotting import LineCanvas,ContourCanvas
 from utils.fit import GlobalFitWorker
-logger = add_logger(__name__)
+from utils.error_handling import error_handler,ErrorBox
 import traceback
   
 # =============================================================================
@@ -51,8 +51,15 @@ class MainWindow(QMainWindow):
     def __init__(self):
      try:
         super().__init__()
+        self.logger = add_logger(__name__)
         self.setWindowTitle(f"Smore's Fancy Fit App v{__version__}")
+        
         self.resize(1200, 500)
+        # screen = QApplication.primaryScreen().availableGeometry()
+        # window = self.frameGeometry()
+        # window.moveCenter(screen.center())
+        self.move(100,50)
+        
         self.load_settings()
         self.initialize_data()
         self.build_gui()
@@ -60,8 +67,9 @@ class MainWindow(QMainWindow):
         self.results_box.setText('Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!')
     
      except Exception as e:
-         logger.error(traceback.format_exc())
-         QMessageBox.critical(self,'error',f'Fatal Error in {__name__}:\n {e}')
+         self.logger.exception(f'Error while building Main Window: {e}')
+         ErrorBox('error',f'Error while building Main Window: {e}',
+                  details=traceback.format_exc(),parent=self)
 
 # =============================================================================
 # Functions:
@@ -166,7 +174,9 @@ class MainWindow(QMainWindow):
         Label(layout_fitsettings,'Mode',layout_args=(0,0))
         Dropdown(layout_fitsettings,['Global','Simple'],layout_args=(0,1))
         Label(layout_fitsettings,'Method',layout_args=(1,0))
-        self.method_input = Dropdown(layout_fitsettings,['migrad','L-BFGS-B','TNC','COBYLA','SLSQP','trust-constr','CG','Powell','BFGS',],standard='Powell',layout_args=(1,1))
+        self.method_input = Dropdown(layout_fitsettings,
+                                     ['migrad','L-BFGS-B','TNC','COBYLA','SLSQP','trust-constr','CG','Powell','BFGS',],
+                                     standard=self.set.default_method,layout_args=(1,1))
 
         frame_fitsettings.setLayout(layout_fitsettings)
         self.left_panel.addWidget(frame_fitsettings)
@@ -242,7 +252,7 @@ class MainWindow(QMainWindow):
         
         figsize_2D = (18,9)
         
-        self.plot_kin = LineCanvas(figsize=figsize_2D)
+        self.plot_kin = LineCanvas(figsize=figsize_2D,layout=self.set.plot_style)
         layout_2D.addWidget(self.plot_kin)
         
         slider_layout1 = QHBoxLayout()
@@ -265,13 +275,13 @@ class MainWindow(QMainWindow):
         layout_3D = QGridLayout()
         figsize_3D=(9,9)
 
-        self.plot3D_Z = ContourCanvas(figsize=figsize_3D,layout='split')
+        self.plot3D_Z = ContourCanvas(figsize=figsize_3D,layout=self.set.plot_style)
         layout_3D.addWidget(self.plot3D_Z,0,0)
         
-        self.plot3D_Zfit = ContourCanvas(figsize=figsize_3D,layout='split')
+        self.plot3D_Zfit = ContourCanvas(figsize=figsize_3D,layout=self.set.plot_style)
         layout_3D.addWidget(self.plot3D_Zfit,0,1)
         
-        self.plot3D_res = ContourCanvas(figsize=figsize_3D,layout='split')
+        self.plot3D_res = ContourCanvas(figsize=figsize_3D,layout=self.set.plot_style)
         layout_3D.addWidget(self.plot3D_res,1,0)
         
         self.plot3D_DADS = LineCanvas(figsize=figsize_3D)
@@ -330,7 +340,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self,"Cannot close tab","Can't remove last component...")           
             
     def exit_app(self):
-        logger.info('Closing Main Window')
+        self.logger.info('Closing Main Window')
         self.close()
         
         
@@ -384,8 +394,8 @@ class MainWindow(QMainWindow):
             self.status_label1.setText(f'Data Loaded: {len(self.data.x)} x points, {len(self.data.y)} y points and {str(self.data.z.shape).replace(',','x')} z points')
         
         except Exception as e:
-            logger.exception('Error Loading Data')
-            QMessageBox.warning(self,'Error Loading Data:',f'{e}')
+            self.logger.exception('Error Loading Data')
+            ErrorBox('error',f'Error Loading Data: {e}',parent=self)
             
             self.data = data_class(Empty = True)
             self.data.DADS = np.full((self.parm_tabs.count(),len(self.data.y)),np.nan)
@@ -452,9 +462,11 @@ class MainWindow(QMainWindow):
 
     def open_settings(self):
         from gui.SettingsWindow import SettingsWindow
-        sw = SettingsWindow()
+        sw = SettingsWindow(settings=self.set)
         if sw.exec():
             self.set = sw.settings
+            self.set.save()
+
         self.statusBar().showMessage('settings updated')
     
     def open_functionbuilder(self):
@@ -583,6 +595,7 @@ class MainWindow(QMainWindow):
     # Fit Functions and Classes:
     # =============================================================================
     
+    @error_handler
     def convolute_functions(self,FunObjs,IRF):
         return FunObjs
         """f: functions, p: parm names, p0: initial guesses, pl: lower boundaries, p: upper boundaries, cp: common parameters"""
@@ -610,7 +623,8 @@ class MainWindow(QMainWindow):
                 return self.FitFuns.conv(y_fun,y_irf)
 
         # common_parms = list(dict.fromkeys(common_parms + IRF.parms)) # add irf parameters to common parameters, while preserving order and removing duplicates.
-        
+    
+    @error_handler   
     def prepare_fit(self):
         # Prepare data and settings for global fit
         irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
@@ -639,19 +653,22 @@ class MainWindow(QMainWindow):
                 'p_upper': pu,
                 'common_parms': cp,
                 'method': self.method_input.currentText(),
+                'iterations': self.set.fit_iterations,
                  }
         
         return data.x, data.y, data.z.T, settings
-
+    
+    @error_handler
     def update_fit_progress(self,progress):
         if isinstance(progress,str):
-            # self.statusBar().showMessage(f'Executing Global Fit: {progress}')
-            pass
+            self.statusBar().showMessage(f'Executing Global Fit: {progress}')
+            
         elif type(progress).__name__=='FitProgress':
             #progress is in type of fitpgrogress class with attributes chi2, parameters, iteration, total_iterations
-            report = f'Iter.{progress.iteration}/{progress.total_iterations} with chi2={progress.chi2:.3f}'
+            report = f'Iter.{progress.iteration+1}/{progress.total_iterations} with chi2={progress.chi2:.3g}'
             self.statusBar().showMessage(f'Executing Global Fit: {report}')
     
+    @error_handler
     def update_results(self):
             p_dict = self.gf.p_dict
             errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
@@ -682,9 +699,9 @@ class MainWindow(QMainWindow):
             
             self.results_box.append(report)
             self.results_box.verticalScrollBar().setValue(
-            self.results_box.verticalScrollBar().maximum()
-            )
+                self.results_box.verticalScrollBar().maximum())
     
+    @error_handler
     def fit_finished(self,result):
         self.gf = result
         self.thread.quit()
@@ -704,10 +721,11 @@ class MainWindow(QMainWindow):
 
         # Print Results in Prompt Box
         self.update_results()
-        self.statusBar().showMessage('Fit finished successfully',1000)
+        self.statusBar().showMessage('Fit finished',5000)
         self.status_label2.setText('global fit')
         self.statusBar().showMessage('Ready...',0)
     
+    @error_handler
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
             

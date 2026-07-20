@@ -54,6 +54,20 @@ def make_cmap(name='fancy',n_levels=40,zrange=(-1,1)):
 # PLOT WIDGET WRAPPER
 # ---------------------------
 
+def get_break(x,axis_break):
+    if axis_break == 'auto' or type(axis_break)==str:
+        ix0 = len(x)//3
+    
+    elif len(x)<3:
+        ix0 = 0
+    
+    if min(x)>axis_break or max(x)<axis_break:
+        ix0 = len(x)//3
+    else:
+        ix0 = np.argmax(x>axis_break)
+    
+    return ix0
+
 class BaseCanvas(FigureCanvasQTAgg):
 
     def __init__(self, figsize = (6,4), dpi=80):
@@ -75,43 +89,59 @@ class BaseCanvas(FigureCanvasQTAgg):
         
 class LineCanvas(BaseCanvas):
 
-    def __init__(self, layout='single',figsize=None, dpi=100):
+    def __init__(self, layout='linear',figsize=None, axis_break=2, dpi=100):
         super().__init__(figsize=figsize,dpi=dpi)
 
         self.lines = {}
         self.set_layout(layout)
+        self.axis_break=axis_break
 
     def set_layout(self,layout):
-        if layout=='single':
-            self._layout = 'single'
+        if layout=='linear':
+            self._layout = 'linear'
             self.clear()
             self.axes["main"] = self.fig.add_subplot(111)
             self.axes['main'].axhline(0,color='k',linewidth=self.axes['main'].spines['left'].get_linewidth())
             self.draw_idle()
-        elif layout=='split':
-            self._layout = 'split'
+        elif layout=='linlog':
+            self._layout = 'linlog'
             self.clear()
             gs = self.fig.add_gridspec(
                 1, 2,
-                width_ratios=(2,1),
-                wspace=0.1)
+                width_ratios=(1,2),
+                wspace=0.01)
             self.axes["main"] = self.fig.add_subplot(gs[0, 0])
             self.axes['main'].axhline(0,color='k',linewidth=self.axes['main'].spines['left'].get_linewidth())
-            self.axes["log"] = self.fig.add_subplot(gs[0, 1])
+            self.axes["log"] = self.fig.add_subplot(gs[0, 1],sharey=self.axes['main'])
             self.axes['log'].axhline(0,color='k',linewidth=self.axes['log'].spines['left'].get_linewidth())
+            self.axes["log"].set_xscale('log')
+            self.axes["log"].tick_params(
+                                            axis='y',
+                                            left=False,
+                                            labelleft=False
+                                        )
             self.draw_idle()
+            
 
-    def set_line(self,name, x, y,**kwargs):
+    def set_line(self,name, x, y, axis_break=2, **kwargs):
         if name not in self.lines:
-            if self._layout=='single':
+            if self._layout=='linear':
                 self.lines[name], = self.axes['main'].plot(x, y,**kwargs)
             
-            else:
-                pass        
+            elif self._layout=='linlog':
+                ix0 = get_break(x,axis_break)
+                self.lines[name], = self.axes['main'].plot(x[:ix0],y[:ix0],**kwargs)
+                self.lines['_'+name+'_log'], = self.axes['log'].plot(x[ix0:],y[ix0:],**kwargs)
+                        
         
         else:
-            if self._layout=='single':
+            if self._layout=='linear':
                 self.lines[name].set_data(x,y)
+                
+            elif self._layout=='linlog':
+                ix0 = get_break(x,axis_break)
+                self.lines[name].set_data(x[:ix0],y[:ix0])
+                self.lines['_'+name+'_log'].set_data(x[ix0:],y[ix0:])
                  
     
     def clear_lines(self,name=None):
@@ -126,7 +156,7 @@ class LineCanvas(BaseCanvas):
         self.axes['main'].set_ylabel=ylabel
 
 class ContourCanvas(BaseCanvas):
-    def __init__(self, layout='single',figsize=None, dpi=80):
+    def __init__(self, layout='linear',figsize=None, dpi=80):
         super().__init__(figsize=figsize,dpi=dpi)
         self.fig.subplots_adjust(
                                 left=0.02,
@@ -139,17 +169,18 @@ class ContourCanvas(BaseCanvas):
         self.contours = {}
         self.set_layout(layout=layout)
 
-    def set_layout(self,layout='single'):
-        if layout=='single':
-            self._layout = 'single'
+    def set_layout(self,layout='linear'):
+        if layout=='linear':
+            self._layout = 'linear'
             self.clear()
             self.axes["main"] = self.fig.add_subplot(111)
 
-        elif layout=='split':
-            self._layout = 'split'
+        elif layout=='linlog':
+            self._layout = 'linlog'
             self.clear()
 
-            gs = self.fig.add_gridspec(2, 1, height_ratios=(2, 1),
+            gs = self.fig.add_gridspec(2, 1, 
+                                       height_ratios=(2, 1),
                                        hspace=0.01
                                        )
 
@@ -161,7 +192,7 @@ class ContourCanvas(BaseCanvas):
 
     def set_contour(self, x, y, Z, zrange=(-1,1), axis_break=2, **kwargs):
         cmap,levels = make_cmap(zrange=zrange)
-        if self._layout == 'single':
+        if self._layout == 'linear':
             if 'fill' in self.contours:
                 for c in self.contours['fill'].collections:
                     c.remove()
@@ -174,8 +205,8 @@ class ContourCanvas(BaseCanvas):
                                                            colors=cmap,levels=levels,
                                                            extend='both')
             
-        elif self._layout == 'split':
-            iy0 = np.argmax(y>axis_break)
+        elif self._layout == 'linlog':
+            iy0 = get_break(y,axis_break)
             
             if 'fill' in self.contours:
                 self.contours['fill'].remove()
