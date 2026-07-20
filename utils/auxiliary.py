@@ -131,6 +131,7 @@ class fancyfitSettings:
         self.scaling_factor_y = 1
         self.fit_iterations = 3
         self.z_3Dstretch = 2.5
+        self.plot_style = 'linlog'
         self.axes_break = 'auto'
         self.x_label = 'dt'
         self.y_label = 'wl'
@@ -141,11 +142,11 @@ class fancyfitSettings:
         self.x_name = 'Kinetics'
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
-        self.fit_method = 'iminuit'
+        self.default_method = 'Powell'
         self.use_irf = False
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
-        self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','Z.txt'))
+        self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
         self.y_data_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))
         self.x_data_path = str(Path(Path(__file__).parent.parent,'Test Data','t.txt'))
 # =============================================================================

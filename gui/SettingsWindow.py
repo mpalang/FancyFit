@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 from datetime import datetime
 from matplotlib import pyplot as plt
+from copy import deepcopy
 
 
 from PySide6.QtGui import QIcon
@@ -49,16 +50,17 @@ import traceback
 # =============================================================================
 
 class SettingsWindow(QDialog):
-    def __init__(self):
+    def __init__(self,settings= None):
      try:
         super().__init__()
         self.setWindowTitle("Settings")
         icon_path = Path(Path(__file__).parent,'Settings_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
-        self.setWindowIcon(QIcon(str(icon_path)))
-        # self.resize(500, 500)
-        # self.set_defaults()
-        self.settings = fancyfitSettings()
+
+        if settings:
+            self.settings = deepcopy(settings)
+        else:
+            self.settings = fancyfitSettings()
         self.input = {}
         self.build_gui()
      except Exception as e:
@@ -94,10 +96,10 @@ class SettingsWindow(QDialog):
         frame_fit.setFrameShadow(QFrame.Raised)
         layout_fit = QGridLayout()
         Label(layout_fit,'Fit Settings',bold=True,layout_args=(0,0))
-        self.input['fit_iterations'] = Label(layout_fit,'Iterations',layout_args=(1,0))
-        Spinbox(layout_fit,1,10,self.settings.fit_iterations,layout_args=(1,1))
+        Label(layout_fit,'Iterations',layout_args=(1,0))
+        self.input['fit_iterations'] = Spinbox(layout_fit,1,10,self.settings.fit_iterations,layout_args=(1,1))
         Label(layout_fit,'Default Fit Method',layout_args=(2,0))
-        self.input['fit_method'] = Inputbox(layout_fit,default=self.settings.fit_method,layout_args=(2,1))
+        self.input['default_method'] = Inputbox(layout_fit,default=self.settings.default_method,layout_args=(2,1))
         Label(layout_fit,'Use IRF',layout_args=(3,0))
         self.input['use_irf'] = Checkbox(layout_fit,default=self.settings.use_irf,grid=(3,1))
         frame_fit.setLayout(layout_fit)
@@ -110,8 +112,10 @@ class SettingsWindow(QDialog):
         Label(layout_plot,'Plot Settings',bold=True,layout_args=(0,0))
         Label(layout_plot,'z 3D stretch',layout_args=(1,0))
         self.input['z_3Dstretch'] = Inputbox(layout_plot,default=str(self.settings.z_3Dstretch),layout_args=(1,1))
-        Label(layout_plot,'axes break',layout_args=(2,0))
-        self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
+        Label(layout_plot,'plot layout',layout_args=(2,0))
+        self.input['plot_style'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
+        Label(layout_plot,'axes_break',layout_args=(3,0))
+        self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(3,1))
         frame_plot.setLayout(layout_plot)
         main_layout.addWidget(frame_plot,1,0)
 
@@ -148,7 +152,6 @@ class SettingsWindow(QDialog):
 
     def on_save(self):
         self.read_input()
-        self.settings.save()
         self.accept()
     
     def on_cancel(self):

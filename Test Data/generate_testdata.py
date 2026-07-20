@@ -34,8 +34,8 @@ def exp_decay_conv_gauss(t,t0,A,tau,FWHM):
 
 
 
-x = np.linspace(-10,300,3000)
-y = np.linspace(300,800,1000)
+x = np.linspace(-10,300,300)
+y = np.linspace(300,800,100)
 
 DADS1 = gauss(y,320,-0.3,80)+gauss(y,600,0.4,300)+gauss(y,450,0.3,80)
 DADS2 = gauss(y,320,-0.2,80)+gauss(y,400,0.5,230)+gauss(y,700,0.5,200)
