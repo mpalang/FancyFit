@@ -73,13 +73,14 @@ class DataTweakPanel(QWidget):
         self.cut_button = Button(layout,'cut data',(0,1))
         self.uncut_button = Button(layout,'full data', (0, 2))
         self.x_label = Label(layout,'x', (1, 0))
-        self.x_low = Inputbox(layout, '1', (1, 1))
-        self.x_high = Inputbox(layout, '2', (1,2))
+        self.x_low = Inputbox(layout, '', (1, 1))
+        self.x_high = Inputbox(layout, '', (1,2))
         self.y_label = Label(layout,'y', (2,0))
-        self.y_low = Inputbox(layout, '3', (2,1))
-        self.y_high = Inputbox(layout, '4', (2,2))
+        self.y_low = Inputbox(layout, '', (2,1))
+        self.y_high = Inputbox(layout, '', (2,2))
         
         self.old_style = self.y_high.styleSheet() # store old style so it can be reset after validate
+        
         
     def create_connections(self):
         self.x_low.textChanged.connect(self.validate)
@@ -90,17 +91,20 @@ class DataTweakPanel(QWidget):
         self.cut_button.clicked.connect(self._cut_requested)
         self.uncut_button.clicked.connect(self.uncut_requested)
     
+    
     def set_bg_color(self,color):
         self.x_low.setStyleSheet(f"background-color: {color};")
         self.x_high.setStyleSheet(f"background-color: {color};")
         self.y_low.setStyleSheet(f"background-color: {color};")
         self.y_high.setStyleSheet(f"background-color: {color};")
         
+        
     def reset_style(self):
         self.x_low.setStyleSheet(self.old_style)
         self.x_high.setStyleSheet(self.old_style)
         self.y_low.setStyleSheet(self.old_style)
         self.y_high.setStyleSheet(self.old_style)
+        
         
     def validate(self):
         try:
@@ -119,6 +123,7 @@ class DataTweakPanel(QWidget):
             self.set_bg_color('rgba(255, 150, 150, 120)')
             return False
             
+        
     def _cut_requested(self):
         if self.validate():
             self.cut_requested.emit()
@@ -131,6 +136,13 @@ class DataTweakPanel(QWidget):
         self.y_label.setText(y_label)
     
     
+    def set_limits(self,x_limits,y_limits):
+        self.x_low.setText(f'{x_limits[0]:.4g}')
+        self.x_high.setText(f'{x_limits[1]:.4g}')
+        self.y_low.setText(f'{y_limits[0]:.4g}')
+        self.y_high.setText(f'{y_limits[1]:.4g}')
+        
+        
     @property
     def x_limits(self):
         return (float(self.x_low.text()),float(self.x_high.text()))
@@ -191,9 +203,15 @@ class FitSettingsPanel(QWidget):
         self.mode_input.currentTextChanged.connect(self.mode_changed)
         self.method_input.currentTextChanged.connect(self.method_changed)
         
+        
     def set_defaults(self,defaults):
         for key,value in defaults.items():
             getattr(self,f'{key}_input').setCurrentText(value)
+            
+    
+    @property
+    def method(self):
+        return self.method_input.currentText()
             
   
 
@@ -208,7 +226,6 @@ class ParmsPanel(QWidget):
         self.FitFuns = FitFuns
         self.fun_name = fun_name
         self.layout = QGridLayout()
-        # self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         self.fun_input = (Dropdown(self.layout,
                                     FitFuns.names(),
@@ -230,6 +247,7 @@ class ParmsPanel(QWidget):
         
         self.setLayout(self.layout)
     
+    
     def build_parms_input(self):
         self.Parms=QWidget()
         Parms_layout=QVBoxLayout()
@@ -249,6 +267,7 @@ class ParmsPanel(QWidget):
         Parms_layout.addStretch()
         self.Parms.setLayout(Parms_layout)
         self.layout.addWidget(self.Parms,3,0,1,4)
+        
         
     def on_function_change(self):
         self.Parms.deleteLater()
@@ -293,7 +312,6 @@ class FunctionsInputPanel(QWidget):
         self.main_layout = QVBoxLayout(frame)
         
         self.create_ui()
-        self.create_connections()
         
         central = QVBoxLayout()
         self.setLayout(central)
@@ -320,12 +338,7 @@ class FunctionsInputPanel(QWidget):
         self.parm_tabs.setFixedSize(250, 300)
         
         layout.addWidget(self.parm_tabs)
-        
 
-    def create_connections(self):
-        pass
-        # self.mode_input.currentTextChanged.connect(self.mode_changed)
-        # self.method_input.currentTextChanged.connect(self.method_changed)
         
     def set_defaults(self,defaults):
        for fun_name in defaults:
@@ -379,6 +392,34 @@ class FunctionsInputPanel(QWidget):
     @property
     def no_comps(self):
         return self.parm_tabs.count()
+    
+    
+    @property
+    def irf_index(self):
+        irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
+        return irf_index
+
+    
+    @property
+    def IRF(self):
+        if self.irf_index:
+            IRF = self.parm_tabs.widget(self.irf_index[0]).values()
+        else:
+            IRF = None
+        return IRF
+       
+        
+    @property
+    def Fit_Funs(self):
+        Fit_Funs = [self.parm_tabs.widget(n).values for n in range(self.parm_tabs.count()) if n not in self.irf_index]  
+        return Fit_Funs
+    
+    
+    @property
+    def common_parms(self):
+        return self.common_parms_input.text().replace(' ','').split(',')
+    
+    
 # =============================================================================
 # Plot Panel
 # =============================================================================
@@ -397,7 +438,8 @@ class LinesTab(QWidget):
                 'markerfacecolor': 'k',
                 'markeredgecolor': 'k',
                 'markeredgewidth': 0.1,
-                'markersize': 0.4}
+                'markersize': 0.8}
+    
     
     def __init__(self, figsize = (18,9), plot_style='linear'):
         super().__init__()
@@ -583,7 +625,6 @@ class PlotPanel(QWidget):
         self.main_layout = QGridLayout(frame)
         
         self.create_ui()
-        self.create_connections()
         
         central = QVBoxLayout()
         self.setLayout(central)
@@ -604,12 +645,6 @@ class PlotPanel(QWidget):
         layout.addWidget(Tabs)
         
 
-    def create_connections(self):
-        pass
-        # self.mode_input.currentTextChanged.connect(self.mode_changed)
-        # self.method_input.currentTextChanged.connect(self.method_changed)
-        
-        
     def set_labels(self):
        self.plot_kin.fig.suptitle(self.set.x_name)
        self.plot_kin.set_labels(self.set.x_label+'/'+self.set.x_unit,
@@ -661,6 +696,8 @@ class ResultsPanel(QWidget):
 
     def appendText(self,text):
         self.results_box.appendPlainText(text)
-        
+        self.rsp.results_box.verticalScrollBar().setValue(
+            self.results_box.verticalScrollBar().maximum())
+    
     def setText(self,text):
         self.results_box.setPlainText(text)
