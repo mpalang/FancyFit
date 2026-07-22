@@ -86,7 +86,10 @@ class BaseCanvas(FigureCanvasQTAgg):
         self.axes = {}
         self.draw_idle()
         
-        
+    
+# =============================================================================
+#         
+# =============================================================================
 class LineCanvas(BaseCanvas):
 
     def __init__(self, layout='linear',figsize=None, axis_break=2, dpi=100):
@@ -154,7 +157,17 @@ class LineCanvas(BaseCanvas):
     def set_labels(self,xlabel,ylabel):
         self.axes['main'].set_xlabel=xlabel
         self.axes['main'].set_ylabel=ylabel
-
+        
+        
+    def rescale(self):
+        for ax in self.axes:
+            self.axes[ax].relim()
+            self.axes[ax].autoscale_view()
+        self.draw_idle()
+        
+# =============================================================================
+# 
+# =============================================================================
 class ContourCanvas(BaseCanvas):
     def __init__(self, layout='linear',figsize=None, dpi=80):
         super().__init__(figsize=figsize,dpi=dpi)
@@ -222,3 +235,9 @@ class ContourCanvas(BaseCanvas):
                                                 colors=cmap,levels=levels, 
                                                 extend='both')
             
+    
+    def rescale(self):
+        for ax in self.axes:
+            self.axes[ax].relim()
+            self.axes[ax].autoscale_view()
+        self.draw_idle()

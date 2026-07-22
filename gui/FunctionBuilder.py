@@ -41,6 +41,7 @@ from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
                           ParmRow)
 from utils.auxiliary import FitFunctions, fitFunction
 from utils.plotting import LineCanvas
+from utils.error_handling import error_handler, ErrorBox
 
 logger = add_logger(__name__)
   
@@ -50,32 +51,29 @@ logger = add_logger(__name__)
 # =============================================================================
 
 class FunctionBuilder(QDialog):
+    parms=[]
+    p0=[]
+    p_lower=[]
+    p_upper=[]
+        
     def __init__(self):
-     # try:
+     try:
         super().__init__()
         self.setWindowTitle("FunctionBuilder")
         icon_path = Path(Path(__file__).parent,'Function_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
         # self.resize(500, 500)
         # self.set_defaults()
-        self.parms=[]
-        self.p0=[]
-        self.p_lower=[]
-        self.p_upper=[]
-        self.FitFuncs = FitFunctions()
-        self.build_gui()
-     # except Exception as e:
-     #     logger.exception()
-     #     QMessageBox.critical(self,'error',f'Fatal Error in {__name__}: {e}')
 
-# =============================================================================
-# Functions:
-# =============================================================================
+        # self.FitFuns = FitFunctions()
+        self.create_ui()
+        
+     except Exception as e:
+         logger.exception()
+         ErrorBox('error',f'Fatal Error in {__name__}: {e}')
+
     
-    # =============================================================================
-    # GUI Functions:
-    # =============================================================================
-    def build_gui(self):
+    def create_ui(self):
         main_layout = QGridLayout()
         
         frame = QFrame()
@@ -91,7 +89,7 @@ class FunctionBuilder(QDialog):
         Label(self.layout,'common parms',grid=(2,1))
         self.parms_input = Inputbox(self.layout,"x0, a, b, c, d",grid=(3,0))
         self.common_parms_input = Inputbox(self.layout,default='x0',grid=(3,1))
-        Button(self.layout,'Refresh',command=self.refresh_parms,grid=(3,2))
+        Button(self.layout,'Refresh',connect=self.refresh_parms,grid=(3,2))
         
         self.frame_parms = QFrame()
         self.frame_parms.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
@@ -123,7 +121,7 @@ class FunctionBuilder(QDialog):
         test_inputs_frame.setLayout(test_inputs_layout)
         plot_layout.addWidget(test_inputs_frame)
 
-        Button(plot_layout,'Test Data',command=self.test_data)
+        Button(plot_layout,'Test Data',connect=self.test_data)
         self.plot = LineCanvas()
         plot_layout.addWidget(self.plot)
         self.lines = self.plot.axes['main'].plot([None],[None],[None],[None],[None],[None])
@@ -133,19 +131,21 @@ class FunctionBuilder(QDialog):
        
         # =============================================================================
         # Buttons
-        Button(main_layout,'Save',command=self.on_save,layout_args=(1,0))
-        Button(main_layout,'Cancel',command=self.on_cancel,layout_args=(1,1))
+        Button(main_layout,'Save',connect=self.on_save,layout_args=(1,0))
+        Button(main_layout,'Cancel',connect=self.on_cancel,layout_args=(1,1))
         
         self.setLayout(main_layout)
 
     # =============================================================================
-    #    Functions
+    # Methods
     # =============================================================================
+    @error_handler
     def get_parms(self):
         parms = self.parms_input.text().replace(' ','').split(',')
         parms = [p for p in parms if p != '']
         return parms
     
+    @error_handler
     def refresh_parms(self):
         self.parms_panel.refresh_parms()
 
@@ -242,13 +242,6 @@ class FunctionBuilder(QDialog):
         self.reject()
     
         
-        
-
-    #%% =============================================================================
-    # Data and Settings Functions:
-    # =============================================================================
-     
-    
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 if __name__ == "__main__":

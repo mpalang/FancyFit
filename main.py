@@ -21,6 +21,7 @@ if __name__=='__main__':
     logger = add_logger(__name__)
     
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
     
     if Path('utils/theme.qss').exists():
         with open(Path('utils/theme.qss'), "r") as f:
