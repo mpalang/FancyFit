@@ -4,7 +4,7 @@ Created on Sun 7 June 14:27:42 2026
 
 @author: moritzpalang
 """
-
+        
 import sys
 from pathlib import Path
 import numpy as np
@@ -31,6 +31,10 @@ from PySide6.QtGui import QFont, QIcon
 from PySide6.QtGui import QAction
 from PySide6.QtCore import QThread
 
+if __name__ == "__main__":
+    if str(Path(__file__).parent.parent) not in sys.path:
+        sys.path.append(str(Path(__file__).parent.parent))
+
 # Add personal modules:
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,Label,ParmsPanel)
 
@@ -40,6 +44,8 @@ from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 from utils.plotting import LineCanvas,ContourCanvas
 from utils.fit import GlobalFitWorker
 from utils.error_handling import error_handler,ErrorBox
+
+from gui.panels.main_window_panels import DataTweakPanel,FitSettingsPanel,FunctionsInputPanel
 import traceback
   
 # =============================================================================
@@ -48,71 +54,61 @@ import traceback
 # =============================================================================
         
 class MainWindow(QMainWindow):
+    """This is the main Window for FancyFit."""
+    @error_handler
     def __init__(self):
-     try:
         super().__init__()
         self.logger = add_logger(__name__)
         self.setWindowTitle(f"Smore's Fancy Fit App v{__version__}")
         
+        #Geometrics
         self.resize(1200, 500)
         # screen = QApplication.primaryScreen().availableGeometry()
         # window = self.frameGeometry()
         # window.moveCenter(screen.center())
         self.move(100,50)
         
+        #Load and initialize
         self.load_settings()
         self.initialize_data()
-        self.build_gui()
         
+        self.create_ui()
+        self.create_connections()
+        
+        #Welcome Text
         self.results_box.setText('Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!')
-    
-     except Exception as e:
-         self.logger.exception(f'Error while building Main Window: {e}')
-         ErrorBox('error',f'Error while building Main Window: {e}',
-                  details=traceback.format_exc(),parent=self)
 
 # =============================================================================
 # Functions:
 # =============================================================================
     
     # =============================================================================
-    # GUI Functions:
+    # Assemble UI:
     # =============================================================================
-    def build_gui(self):
-        # ---------------------------
-        # MENU BAR
-        self.build_menu()
+    def create_ui(self):
+        self.main_layout = QHBoxLayout()
+        
+        self.create_menu()
+
+        self.create_left_panel()
+        self.create_plot_panel()     
+        self.create_results_panel()
+
+        self.create_status_bar()
+        
         # ---------------------------
         # CENTRAL WIDGET
         central = QWidget()
         self.setCentralWidget(central)
-        self.main_layout = QHBoxLayout()
         central.setLayout(self.main_layout)
         
-        # =============================================================================
-        # build panels
-        # =============================================================================
-        self.build_left_panel()
-        self.build_plot_panel()     
-        self.build_results_panel()
-        
-        # # ---------------------------
-        # # TOOLBAR
-        # # ---------------------------
-        # toolbar = self.addToolBar("Main")
-        # toolbar.addAction("Run Fit")
-        # toolbar.addAction("Save Plot")
-       
-        # ---------------------------
-        # STATUS BAR
-        # ---------------------------
-        self.status_label1 = QLabel("no data")
-        self.status_label2 = QLabel("no fit")
-        self.statusBar().addPermanentWidget(self.status_label1)
-        self.statusBar().addPermanentWidget(self.status_label2)
-        self.statusBar().showMessage('Ready...')
-        
-    def build_menu(self):
+    def create_connections(self):
+        pass
+    
+    # =============================================================================
+    # create UI elements: 
+    # =============================================================================
+    def create_menu(self):
         menu = self.menuBar()
 
         file_menu = menu.addMenu("File")
@@ -141,106 +137,43 @@ class MainWindow(QMainWindow):
         reset_user_action.triggered.connect(self.reset_user_defaults)
         reset_action.triggered.connect(self.restore_defaults)
 
-    
-    def build_left_panel(self):
-        frame_left_panel = QFrame()
-        frame_left_panel.setFrameShape(QFrame.StyledPanel)
-        frame_left_panel.setFrameShadow(QFrame.Raised)
-        self.left_panel = QVBoxLayout()
 
-        # Data Tweak
-        frame_datatweak = QFrame()
-        frame_datatweak.setFrameShape(QFrame.StyledPanel)
-        frame_datatweak.setFrameShadow(QFrame.Raised)
-        layout_datatweak = QGridLayout()
-        layout_datatweak.addWidget(QLabel("Set Ranges"), 0, 0)
-        Button(layout_datatweak,'cut data',command = self.cut_data, layout_args = (0, 1))
-        Button(layout_datatweak,'full data',command = self.full_data, layout_args = (0, 2))
-        layout_datatweak.addWidget(QLabel(self.set.x_label), 1, 0)
-        self.xcut_low = Inputbox(layout_datatweak,default='',layout_args= (1, 1))#TODO: replace with SpinboxDouble
-        self.xcut_high = Inputbox(layout_datatweak,default='',layout_args= (1,2))
-        layout_datatweak.addWidget(QLabel(self.set.y_label), 2, 0)
-        self.ycut_low = Inputbox(layout_datatweak,default='',layout_args= (2,1))
-        self.ycut_high = Inputbox(layout_datatweak,default='',layout_args= (2,2))
+    def create_status_bar(self):
+        self.status_label1 = QLabel("no data")
+        self.status_label2 = QLabel("no fit")
+        
+        self.statusBar().addPermanentWidget(self.status_label1)
+        self.statusBar().addPermanentWidget(self.status_label2)
+        
+        self.statusBar().showMessage('Ready...')
+      
+        
+    def create_left_panel(self):
+        frame = QFrame()
+        # frame_left_panel.setFrameShape(QFrame.StyledPanel)
+        # frame_left_panel.setFrameShadow(QFrame.Raised)
+        
+        layout = QVBoxLayout(frame)
 
-        frame_datatweak.setLayout(layout_datatweak)
-        self.left_panel.addWidget(frame_datatweak)
+        self.dtp = DataTweakPanel()
+        self.fsp = FitSettingsPanel(defaults={'method':self.set.default_method})
+        self.fip = FunctionsInputPanel(defaults=self.set.default_funs)
         
-        # Fit Settings
-        frame_fitsettings = QFrame()
-        frame_fitsettings.setFrameShape(QFrame.StyledPanel)
-        frame_fitsettings.setFrameShadow(QFrame.Raised)
-        layout_fitsettings = QGridLayout()
-        Label(layout_fitsettings,'Mode',layout_args=(0,0))
-        Dropdown(layout_fitsettings,['Global','Simple'],layout_args=(0,1))
-        Label(layout_fitsettings,'Method',layout_args=(1,0))
-        self.method_input = Dropdown(layout_fitsettings,
-                                     ['migrad','L-BFGS-B','TNC','COBYLA','SLSQP','trust-constr','CG','Powell','BFGS',],
-                                     standard=self.set.default_method,layout_args=(1,1))
+        layout.addWidget(self.dtp)
+        layout.addWidget(self.fsp)
+        layout.addWidget(self.fip)
 
-        frame_fitsettings.setLayout(layout_fitsettings)
-        self.left_panel.addWidget(frame_fitsettings)
-        
-        # Parameters
-        self.left_panel.addWidget(QLabel("Parameters"))
-        
-        layout_common_parms_and_add_comp = QGridLayout()
-        # self.left_panel.addWidget(QLabel("Common Param"))
-        Label(layout_common_parms_and_add_comp,'Common Parms.',layout_args=(0,0))
-        self.common_parms_input = Inputbox(layout_common_parms_and_add_comp,layout_args=(1,0,1,1))
-        Button(layout_common_parms_and_add_comp,'add component',command=lambda :self.build_parm_panel(),layout_args=(0,1))
-        Button(layout_common_parms_and_add_comp,'remove component',command=lambda :self.remove_parm_panel(),layout_args=(1,1))
-        self.left_panel.addLayout(layout_common_parms_and_add_comp)
-        
-        self.layout_functions = QVBoxLayout()
-        self.parm_tabs = QTabWidget()
-        self.parm_tabs.setFixedSize(250, 300)
-
-        for f in self.set.default_funs:
-            self.build_parm_panel(fun_name=f)     
-        if self.set.use_irf:
-            self.build_parm_panel(fun_name='gauss',tab_name='IRF')
-        self.layout_functions.addWidget(self.parm_tabs)
-        self.left_panel.addLayout(self.layout_functions)   
-        
         #Execute Layout:
         layout_execute = QHBoxLayout()
         Button(layout_execute,'Start Fit',command = self.execute_global_fit)
         Button(layout_execute,'Stop')
-        self.left_panel.addLayout(layout_execute)
+        layout.addLayout(layout_execute)
         
         # add to main layout
-        frame_left_panel.setLayout(self.left_panel)
-        self.main_layout.addWidget(frame_left_panel,1)
+        self.main_layout.addWidget(frame,1)
         
         
-    def build_parm_panel(self,fun_name='exp_decay',tab_name=None):  
-            if not tab_name:
-                tab_name = 'fun'+str(self.parm_tabs.count()+1)
-            self.FitFuns = FitFunctions()          
-            tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
-            self.parm_tabs.addTab(tab,tab_name)
-            self.relabel_tabs()
-            self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
-    
-    def remove_parm_panel(self):
-        if self.parm_tabs.count()>1:
-            widget = self.parm_tabs.currentWidget()
-            index = self.parm_tabs.indexOf(widget)
-        
-            if index != -1:#-1 is returned if widget not found.
-                self.parm_tabs.removeTab(index)
-                widget.deleteLater()
-                self.relabel_tabs()
-        else:
-            QMessageBox.warning(self,'Not so fast!',"Can't remove all components")
-    
-    def relabel_tabs(self):
-        for i in range(self.parm_tabs.count()):
-            if not 'IRF' in self.parm_tabs.tabText(i):
-                self.parm_tabs.setTabText(i, f"fun{i+1}")
-        
-    def build_plot_panel(self):
+    def create_plot_panel(self):
         plot_tabs = QTabWidget()
         
         tab_2D = QWidget()
@@ -299,7 +232,7 @@ class MainWindow(QMainWindow):
         self.set_labels()
 
 
-    def build_results_panel(self):
+    def create_results_panel(self):
         
         results_panel = QVBoxLayout()
         Label(results_panel,'Results')
@@ -316,7 +249,6 @@ class MainWindow(QMainWindow):
 
     # =============================================================================
     # aux gui functions        
-
     def update_common_parms(self,new_common_parms=['']):
         common_parms = self.common_parms_input.text().split(',')
         for new_common_parm in new_common_parms:
@@ -755,13 +687,14 @@ class MainWindow(QMainWindow):
 # ENTRY POINT (Spyder-safe)
 # ---------------------------
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+   
+    # Create QApplication only once
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
     
-    icon_path = Path(r"C:\Users\morit\OneDrive\Anwendungen\FancyFit\icon.ico")
-    app.setWindowIcon(QIcon(str(icon_path)))
+    app.setStyle("Fusion")
     window = MainWindow()
-    window.setWindowIcon(QIcon(str(icon_path)))
     window.show()
     
-    sys.exit(app.exec())
-        
+    app.exec()
