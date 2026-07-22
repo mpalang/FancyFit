@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"Smore's Fancy Fit App v{__version__}")
         
         #Geometrics
-        self.resize(1200, 500)
+        self.resize(1300, 500)
         # screen = QApplication.primaryScreen().availableGeometry()
         # window = self.frameGeometry()
         # window.moveCenter(screen.center())
@@ -76,17 +76,15 @@ class MainWindow(QMainWindow):
         self.initialize_data()
         
         self.create_ui()
-        self.create_connections()
         
         if self.use_test_data:
+            self.dtp.set_limits((min(self.data.x),max(self.data.x)),
+                                (min(self.data.y),max(self.data.y)))
             self.make_plots()
         
         #Welcome Text
         self.rsp.setText('Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!')
 
-    # =============================================================================
-    # Methods:
-    # =============================================================================
     
     # =============================================================================
     # Assemble UI:
@@ -179,6 +177,10 @@ class MainWindow(QMainWindow):
         # add to main layout
         self.main_layout.addWidget(frame,1)
         
+        # connect
+        self.dtp.cut_requested.connect(self.cut_data)
+        self.dtp.uncut_requested.connect(self.uncut_data)
+        
         
     def create_plot_panel(self):
         self.plp = PlotPanel(plot_style=self.set.plot_style)
@@ -195,9 +197,8 @@ class MainWindow(QMainWindow):
         self.close()
         
         
-
-    #%% =============================================================================
-    # Data and Settings Functions:
+    # =============================================================================
+    # Methods:
     # =============================================================================
     @error_handler
     def initialize_data(self):
@@ -223,8 +224,19 @@ class MainWindow(QMainWindow):
             raise RuntimeError('Error loading Data.')
         
         self.data = ldw.data   
+        self.dtp.set_limits((min(self.data.x),max(self.data.x)),
+                            (min(self.data.y),max(self.data.y)))
         self.make_plots()
 
+    
+    @error_handler
+    def cut_data(self):
+        pass
+    
+    
+    @error_handler
+    def uncut_data(self):
+        pass
     
     @error_handler
     def make_plots(self):        
@@ -245,6 +257,7 @@ class MainWindow(QMainWindow):
             self.set.save()
 
         self.statusBar().showMessage('settings updated')
+        
     
     def open_functionbuilder(self):
       try:
@@ -255,6 +268,7 @@ class MainWindow(QMainWindow):
 
       except Exception as e:
           QMessageBox.critical(self,'Error',e)
+          
     
     def save_results(self):
         self.statusBar().showMessage('saving results')
@@ -268,27 +282,20 @@ class MainWindow(QMainWindow):
     # =============================================================================
     # Fit Functions and Classes:
     # =============================================================================
-    
-
     @error_handler   
     def prepare_fit(self):
         # Prepare data and settings for global fit
-        irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
         data = self.data
-        Fun_objs = [self.parm_tabs.widget(n).values() for n in range(self.parm_tabs.count()) if n not in irf_index] # get all functions except 
-        
-        # Convolute if IRF function is 
-        if irf_index or 1==0: # doesn't work yet
-            IRF = self.parm_tabs.widget(irf_index[0]).values()
-            funs,parms,p0,pl,pu,cp = self.convolute_functions(Fun_objs,IRF)
+        irf_index = self.fip.irf_index
+        Fun_Objs = self.fip.Fit_Funs
+        IRF = self.fip.IRF
 
-        else:
-            funs = [fun_obj.func for fun_obj in Fun_objs]
-            parms =[fun_obj.parm_names for fun_obj in Fun_objs]
-            p0 = [fun_obj.p0 for fun_obj in Fun_objs]
-            pl = [fun_obj.p_lower for fun_obj in Fun_objs]
-            pu = [fun_obj.p_upper for fun_obj in Fun_objs]
-            cp = self.common_parms_input.text().replace(' ','').split(',')
+        funs = [fun_obj.func for fun_obj in Fun_Objs]
+        parms =[fun_obj.parm_names for fun_obj in Fun_Objs]
+        p0 = [fun_obj.p0 for fun_obj in Fun_Objs]
+        pl = [fun_obj.p_lower for fun_obj in Fun_Objs]
+        pu = [fun_obj.p_upper for fun_obj in Fun_Objs]
+        cp = self.fip.common_parms
 
         # Prepare settings for global fit
         settings={
@@ -298,13 +305,34 @@ class MainWindow(QMainWindow):
                 'p_lower': pl,
                 'p_upper': pu,
                 'common_parms': cp,
-                'method': self.method_input.currentText(),
+                'method': self.fsp.method,
                 'iterations': self.set.fit_iterations,
                  }
         
         return data.x, data.y, data.z.T, settings
     
     
+    @error_handler
+    def execute_global_fit(self):
+            self.statusBar().showMessage('Executing Global Fit...')
+            
+            x,y,z,settings = self.prepare_fit()
+
+            self.thread = QThread()
+            self.worker = GlobalFitWorker(
+                x,y,z,settings=settings)
+            self.worker.moveToThread(self.thread)
+            self.thread.started.connect(self.worker.run)
+            self.worker.progress.connect(
+                self.update_fit_progress
+            )
+            self.worker.finished.connect(
+                self.fit_finished
+            )
+            
+            self.thread.start()
+            
+            
     @error_handler
     def update_fit_progress(self,progress):
         if isinstance(progress,str):
@@ -322,7 +350,7 @@ class MainWindow(QMainWindow):
             errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
             m = self.gf.m
             
-            fun_names = [self.parm_tabs.widget(n).fun_input.currentText() for n in range(self.parm_tabs.count())]
+            fun_names = [self.fip.parm_tabs.widget(n).fun_input.currentText() for n in range(self.fip.parm_tabs.count())]
             funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
             params_text = "\n".join(
                 f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include errors in the report
@@ -345,9 +373,8 @@ class MainWindow(QMainWindow):
                 f"{fmin_text}"
                 )
             
-            self.results_box.append(report)
-            self.results_box.verticalScrollBar().setValue(
-                self.results_box.verticalScrollBar().maximum())
+            self.rsp.appendText(report)
+    
     
     @error_handler
     def fit_finished(self,result):
@@ -363,9 +390,7 @@ class MainWindow(QMainWindow):
         self.data.residuum = self.gf.residuum.T
         
         # Make Plots
-        self.make_plot_kin()
-        self.make_plot_spec()
-        self.make_plot3D()
+        self.make_plots()
 
         # Print Results in Prompt Box
         self.update_results()
@@ -373,32 +398,7 @@ class MainWindow(QMainWindow):
         self.status_label2.setText('global fit')
         self.statusBar().showMessage('Ready...',0)
     
-    @error_handler
-    def execute_global_fit(self):
-            self.statusBar().showMessage('Executing Global Fit...')
-            
-            x,y,z,settings = self.prepare_fit()
-
-            self.thread = QThread()
-            
-            self.worker = GlobalFitWorker(
-                x,y,z,settings=settings)
-            
-            self.worker.moveToThread(self.thread)
-            
-            self.thread.started.connect(self.worker.run)
-            
-            self.worker.progress.connect(
-                self.update_fit_progress
-            )
-            
-            self.worker.finished.connect(
-                self.fit_finished
-            )
-            
-            self.thread.start()
-                
-
+    
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 # ---------------------------
