@@ -32,8 +32,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QSizePolicy
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
 
 from utils.logger import add_logger
 logger = add_logger(__name__)
@@ -48,9 +46,8 @@ class Checkbox(QCheckBox):
         if root:
             root.addWidget(self,*grid)
 
-
 class Dropdown(QComboBox):
-    def __init__(self,root=None,items=None,standard=None,command=lambda:None,grid=(),layout_args=()):
+    def __init__(self,root=None,items=None,layout_args=(),standard=None,command=lambda:None,grid=()):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid 
@@ -62,7 +59,7 @@ class Dropdown(QComboBox):
         root.addWidget(self,*layout_args)
   
 class Spinbox(QSpinBox):
-    def __init__(self,root=None,lower=0,upper=100,standard=0,layout_args=(),grid=(),expand=False):
+    def __init__(self,root=None,standard=0,layout_args=(),lower=0,upper=100,grid=(),expand=False):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid        
@@ -79,7 +76,7 @@ class Spinbox(QSpinBox):
             )  
 
 class SpinboxDouble(QDoubleSpinBox):
-    def __init__(self,root=None,default=0,limits=(-1e9,1e9),grid=()):
+    def __init__(self,root=None,default=0,grid=(),limits=(-1e9,1e9)):
         super().__init__()
         self.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         if any(limits):
@@ -90,7 +87,7 @@ class SpinboxDouble(QDoubleSpinBox):
             root.addWidget(self,*grid)
 
 class Button(QPushButton):
-    def __init__(self,root=None,name='',command = lambda:None,grid=(),layout_args=(),expand=False):
+    def __init__(self,root=None,name='',layout_args=(),command = lambda:None,grid=(),expand=False):
         super().__init__(name)
         if grid and not layout_args:
             layout_args = grid    
@@ -118,7 +115,7 @@ class Inputbox(QLineEdit):
             )
 
 class Textbox(QTextEdit):
-    def __init__(self, root=None, geometry=None, default='', layout_args=(), grid=()):
+    def __init__(self, root=None, default='', layout_args=(), geometry=None,  grid=()):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid
@@ -128,7 +125,7 @@ class Textbox(QTextEdit):
             root.addWidget(self,*layout_args)
     
 class Label(QLabel):
-    def __init__(self,root=None,text='', bold=False,grid=(),layout_args=()):
+    def __init__(self,root=None,text='',layout_args=(), bold=False,grid=()):
         super().__init__(text)
         if grid and not layout_args:
             layout_args = grid
