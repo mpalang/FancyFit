@@ -6,6 +6,7 @@ Created on Tue Jul 21 12:05:55 2026
 
 This contains all widgets used in the Main Window.
 """
+import numpy as np
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -15,13 +16,17 @@ from PySide6.QtWidgets import (
     QFrame,
     QTabWidget,
     QSizePolicy,
-    QMessageBox
+    QMessageBox,
+    QPlainTextEdit,
 )
 
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QFont
 
-from gui.Elements import Button,Inputbox,Label,Dropdown
+from gui.Elements import Button,Inputbox,Label,Dropdown,Slider,ParmRow
+from utils.plotting import LineCanvas, ContourCanvas
 from utils.auxiliary import FitFunctions
+from utils.error_handling import ErrorBox
 
 # =============================================================================
 # Data Tweak Panel
@@ -67,19 +72,23 @@ class DataTweakPanel(QWidget):
         Label(layout,"Set Ranges",(0,0))
         self.cut_button = Button(layout,'cut data',(0,1))
         self.uncut_button = Button(layout,'full data', (0, 2))
-        Label(layout,'x', (1, 0))
+        self.x_label = Label(layout,'x', (1, 0))
         self.x_low = Inputbox(layout, '1', (1, 1))
         self.x_high = Inputbox(layout, '2', (1,2))
-        Label(layout,'y', (2,0))
+        self.y_label = Label(layout,'y', (2,0))
         self.y_low = Inputbox(layout, '3', (2,1))
         self.y_high = Inputbox(layout, '4', (2,2))
         
         self.old_style = self.y_high.styleSheet() # store old style so it can be reset after validate
         
     def create_connections(self):
-        # self.x_low.
+        self.x_low.textChanged.connect(self.validate)
+        self.x_high.textChanged.connect(self.validate)
+        self.y_low.textChanged.connect(self.validate)
+        self.y_high.textChanged.connect(self.validate)
+        
         self.cut_button.clicked.connect(self._cut_requested)
-        self.uncut_button.clicked.connect(self._uncut_requested)
+        self.uncut_button.clicked.connect(self.uncut_requested)
     
     def set_bg_color(self,color):
         self.x_low.setStyleSheet(f"background-color: {color};")
@@ -100,7 +109,7 @@ class DataTweakPanel(QWidget):
             y_low = float(self.y_low.text())
             y_high = float(self.y_high.text())
         except:
-            self.set_bg_color('red')
+            self.set_bg_color('rgba(255, 150, 150, 120)')
             return False
         
         if x_low < x_high and y_low < y_high:
@@ -113,13 +122,14 @@ class DataTweakPanel(QWidget):
     def _cut_requested(self):
         if self.validate():
             self.cut_requested.emit()
+        else:
+            ErrorBox('Value Error','Input values have to be floats. Left needs to be lower.')
     
-    def _uncut_requested(self):
-        if self.validate():
-            self.uncut_requested.emit()
     
-    def set_defaults(self):
-        pass
+    def set_labels(self,x_label,y_label):
+        self.x_label.setText(x_label)
+        self.y_label.setText(y_label)
+    
     
     @property
     def x_limits(self):
@@ -186,68 +196,7 @@ class FitSettingsPanel(QWidget):
             getattr(self,f'{key}_input').setCurrentText(value)
             
   
-# =============================================================================
-# Parm Row Widget used in ParmsPanel         
-# =============================================================================
-class ParmRow(QWidget):
-    def __init__(self,name,p0,p_lower,p_upper):
-        super().__init__()
-        self.setSizePolicy(QSizePolicy.Policy.Expanding,
-                           QSizePolicy.Policy.Expanding)
-        layout = QHBoxLayout(self)
-        self.name_input = Inputbox(layout,default=name)
-        self.p0_input = Inputbox(layout,default=str(p0))
-        self.p_lower_input = Inputbox(layout,default=str(p_lower))
-        self.p_upper_input = Inputbox(layout,default=str(p_upper))
-                 
-        self.p0_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_lower_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_upper_input.textChanged.connect(self.validate_on_the_fly)
-        
-    def validate_on_the_fly(self):
-        try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
-            else:
-                self.setStyleSheet("background:#ffcccc;")
-                return False
-        except:
-            pass #We don't need to do anything here yet...otherwise too many errors are raised.
-        
-    def validate(self):
-        try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
-            else:
-                self.setStyleSheet("background:#ffcccc;")
-                return False
-        except Exception as e:
-            # logger.error(f'Problem with parameter input:\n {e}') #can activate for debugging. Otherwise it would write too much if user is typing.
-            raise ValueError(f'Make sure you only put in numbers:\n {e}')
-            return False
-  
-    def values(self):
-        if self.validate():
-            name = self.name_input.text()
-            p0 = float(self.p0_input.text())
-            p_lower = float(self.p_lower_input.text())
-            p_upper = float(self.p_upper_input.text())
-            
-            return name,p0,p_lower,p_upper
-        else:
-            QMessageBox.critical(self,'Check Parameters','Please make sure parameter inputs are valid.')
+
 
 
 # =============================================================================
@@ -305,6 +254,8 @@ class ParmsPanel(QWidget):
         self.Parms.deleteLater()
         self.build_parms_input()
     
+    
+    @property
     def values(self):
         fields = [row.values() for row in self.parm_rows]
         
@@ -320,139 +271,396 @@ class ParmsPanel(QWidget):
     
 # =============================================================================
 # Functions Panel
-# =============================================================================
-
-        # # Parameters
-        # layout.addWidget(QLabel("Parameters"))
-        
-        # layout_common_parms_and_add_comp = QGridLayout()
-        # # layout.addWidget(QLabel("Common Param"))
-        # Label(layout_common_parms_and_add_comp,'Common Parms.',layout_args=(0,0))
-        # self.common_parms_input = Inputbox(layout_common_parms_and_add_comp,layout_args=(1,0,1,1))
-        # Button(layout_common_parms_and_add_comp,'add component',command=lambda :self.build_parm_panel(),layout_args=(0,1))
-        # Button(layout_common_parms_and_add_comp,'remove component',command=lambda :self.remove_parm_panel(),layout_args=(1,1))
-        # layout.addLayout(layout_common_parms_and_add_comp)
-        
-        # self.layout_functions = QVBoxLayout()
-        # self.parm_tabs = QTabWidget()
-        # self.parm_tabs.setFixedSize(250, 300)
-
-        # for f in self.set.default_funs:
-        #     self.create_parm_panel(fun_name=f)     
-        # if self.set.use_irf:
-        #     self.create_parm_panel(fun_name='gauss',tab_name='IRF')
-        # self.layout_functions.addWidget(self.parm_tabs)
-        # layout.addLayout(self.layout_functions)   
-        
-        
+# =============================================================================        
 class FunctionsInputPanel(QWidget):
-     
-     """
-     This Panel handles user input for functions and their parameters.
-     It returns FitFunction (siehe utils.auxiliary) objects.
-     """
-     
-     function_added= Signal()
-     common_parms_changed= Signal()
-     
-     def __init__(self,defaults:list=None, irf:str=''):
-         super().__init__()
-         
-         self.FitFuns = FitFunctions() #loads available fit functions.
-         
-         frame = QFrame()
-         frame.setFrameShape(QFrame.StyledPanel)
-         frame.setFrameShadow(QFrame.Raised)
-
-         self.main_layout = QGridLayout(frame)
-         
-         self.create_elements()
-         self.create_layout()
-         self.create_connections()
-         
-         central = QVBoxLayout()
-         self.setLayout(central)
-         central.addWidget(frame)
-         
-         if defaults:
-             self.set_defaults(defaults)
-            
-         if irf:
-             self.add_irf(irf)
-     
-     
-     def create_elements(self):
-         layout = self.main_layout
-         
-         layout_header = QGridLayout()
-         Label(layout_header,'Common Parms.',layout_args=(0,0))
-         self.common_parms_input = Inputbox(layout_header, '', (1,0,1,1))
-         Button(layout_header,'add component',(0,1),command=lambda :self.build_parm_panel())
-         Button(layout_header,'remove component',(1,1),command=lambda :self.remove_parm_panel())
-         layout.addLayout(layout_header,0,0,1,2)
-         
-         self.parm_tabs = QTabWidget()
-         self.parm_tabs.setFixedSize(250, 300)
-         
-         
-     def create_layout(self):
-         layout = self.main_layout
-         
-         layout.addWidget(self.parm_tabs)
-         
-
-     def create_connections(self):
-         pass
-         # self.mode_input.currentTextChanged.connect(self.mode_changed)
-         # self.method_input.currentTextChanged.connect(self.method_changed)
-         
-     def set_defaults(self,defaults):
-        for fun_name in defaults:
-            self.create_parm_panel(fun_name)
-            
+    """
+    This Panel handles user input for functions and their parameters.
+    It returns FitFunction (siehe utils.auxiliary) objects.
+    """
     
-     def add_irf(self,irf_function):
-         if irf_function in self.FitFuns.funs.keys():
-             irf_function = 'gauss'
-         tab = ParmsPanel(self.FitFuns,fun_name=irf_function)
-         self.parm_tabs.addTab(tab,'IRF')
-
+    function_added= Signal()
+    common_parms_changed= Signal()
     
-     def create_parm_panel(self,fun_name='exp_decay',tab_name=None):  
-            if not tab_name:
-                tab_name = 'fun'+str(self.parm_tabs.count()+1)      
-            tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
-            self.parm_tabs.addTab(tab,tab_name)
-            self.relabel_tabs()
-            self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
+    def __init__(self,defaults:list=None, irf:str=''):
+        super().__init__()
+        
+        self.FitFuns = FitFunctions() #loads available fit functions.
+        
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setFrameShadow(QFrame.Raised)
+
+        self.main_layout = QVBoxLayout(frame)
+        
+        self.create_ui()
+        self.create_connections()
+        
+        central = QVBoxLayout()
+        self.setLayout(central)
+        central.addWidget(frame)
+        
+        if defaults:
+            self.set_defaults(defaults)
+           
+        if irf:
+            self.add_irf(irf)
+    
+    
+    def create_ui(self):
+        layout = self.main_layout
+        
+        layout_header = QGridLayout()
+        Label(layout_header, 'Common Parms.', (0,0))
+        self.common_parms_input = Inputbox(layout_header, '', (0,1))
+        Button(layout_header,'add component', (1,0), connect=self.add_component)
+        Button(layout_header,'remove component', (1,1), connect=self.remove_component)
+        layout.addLayout(layout_header)
+        
+        self.parm_tabs = QTabWidget()
+        self.parm_tabs.setFixedSize(250, 300)
+        
+        layout.addWidget(self.parm_tabs)
+        
+
+    def create_connections(self):
+        pass
+        # self.mode_input.currentTextChanged.connect(self.mode_changed)
+        # self.method_input.currentTextChanged.connect(self.method_changed)
+        
+    def set_defaults(self,defaults):
+       for fun_name in defaults:
+           self.add_component(fun_name)
+           
+   
+    def add_irf(self,irf_function):
+        if irf_function in self.FitFuns.funs.keys():
+            irf_function = 'gauss'
+        tab = ParmsPanel(self.FitFuns,fun_name=irf_function)
+        self.parm_tabs.addTab(tab,'IRF')
+
+   
+    def add_component(self,fun_name='exp_decay',tab_name=None):  
+           if not tab_name:
+               tab_name = 'fun'+str(self.parm_tabs.count()+1)      
+           tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
+           self.parm_tabs.addTab(tab,tab_name)
+           self.relabel_tabs()
+           self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
 
 
-     def relabel_tabs(self):
-        for i in range(self.parm_tabs.count()):
-            if not 'IRF' in self.parm_tabs.tabText(i):
-                self.parm_tabs.setTabText(i, f"fun{i+1}")
-                
-                
-     def update_common_parms(self,new_common_parms=['']):
-        common_parms = self.common_parms_input.text().split(',')
-        for new_common_parm in new_common_parms:
-            if new_common_parm not in common_parms:
-                common_parms.append(new_common_parm)
-                common_parms = [v for v in common_parms if v!='' and v!=' ']
-        self.common_parms_input.setText((','.join(common_parms)))
+    def relabel_tabs(self):
+       for i in range(self.parm_tabs.count()):
+           if not 'IRF' in self.parm_tabs.tabText(i):
+               self.parm_tabs.setTabText(i, f"fun{i+1}")
+               
+               
+    def update_common_parms(self,new_common_parms=['']):
+       common_parms = self.common_parms_input.text().split(',')
+       for new_common_parm in new_common_parms:
+           if new_common_parm not in common_parms:
+               common_parms.append(new_common_parm)
+               common_parms = [v for v in common_parms if v!='' and v!=' ']
+       self.common_parms_input.setText((','.join(common_parms)))
+       
+   
+    def remove_component(self):
+       if self.parm_tabs.count()>1:
+           widget = self.parm_tabs.currentWidget()
+           index = self.parm_tabs.indexOf(widget)
+       
+           if index != -1:#-1 is returned if widget not found.
+               self.parm_tabs.removeTab(index)
+               widget.deleteLater()
+               self.relabel_tabs()
+       else:
+           QMessageBox.warning(self,'Not so fast!',"Can't remove all components")
+    
+
+    @property
+    def no_comps(self):
+        return self.parm_tabs.count()
+# =============================================================================
+# Plot Panel
+# =============================================================================
+class LinesTab(QWidget):
+    
+    data = dict()
+    
+    kwargs_raw ={'linestyle': 'None',
+                'marker': 'o',
+                'markerfacecolor': 'None',
+                'markeredgecolor': 'k',
+                'markeredgewidth': 0.5,
+                'markersize': 6}
+    kwargs_raw_inner ={'linestyle': 'None',
+                'marker': 'o',
+                'markerfacecolor': 'k',
+                'markeredgecolor': 'k',
+                'markeredgewidth': 0.1,
+                'markersize': 0.4}
+    
+    def __init__(self, figsize = (18,9), plot_style='linear'):
+        super().__init__()
+        
+        self.create_ui(figsize=figsize,plot_style=plot_style)
+        self.create_connections()
+    
+    
+    def create_ui(self,figsize=(18,9),plot_style='linear'):
+        layout = QVBoxLayout()
+
+        self.kin = LineCanvas(figsize=figsize,layout=plot_style)
+        self.y_slider = Slider()
+        self.rescale_kin = Button(text='rescale')
+        self.auto_scale_kin = Button(text='auto scale')
+        self.spec = LineCanvas(figsize=figsize)
+        self.x_slider = Slider()
+        self.rescale_spec = Button(text='rescale')
+        self.auto_scale_spec = Button(text='auto scale')
+        
+        self.auto_scale_kin.setCheckable(True)
+        self.auto_scale_spec.setCheckable(True)
+        
+        self.auto_scale_kin.setStyleSheet(':checked {background-color: rgb(80,180,80);}')
+        self.auto_scale_spec.setStyleSheet(':checked {background-color: rgb(80,180,80);}')       
+        
+        layout.addWidget(self.kin)
+        x_foot_layout = QHBoxLayout()
+        x_foot_layout.addWidget(self.y_slider)
+        x_foot_layout.addWidget(self.rescale_kin)
+        x_foot_layout.addWidget(self.auto_scale_kin)
+        layout.addLayout(x_foot_layout)
+        layout.addWidget(self.spec)
+        y_foot_layout = QHBoxLayout()
+        y_foot_layout.addWidget(self.x_slider)
+        y_foot_layout.addWidget(self.rescale_spec)
+        y_foot_layout.addWidget(self.auto_scale_spec)
+        layout.addLayout(y_foot_layout)
+        
+        self.setLayout(layout)
         
     
-     def remove_parm_panel(self):
-        if self.parm_tabs.count()>1:
-            widget = self.parm_tabs.currentWidget()
-            index = self.parm_tabs.indexOf(widget)
+    def create_connections(self):
+        self.y_slider.moved.connect(self.refresh_kin_plot)
+        self.x_slider.moved.connect(self.refresh_spec_plot)
         
-            if index != -1:#-1 is returned if widget not found.
-                self.parm_tabs.removeTab(index)
-                widget.deleteLater()
-                self.relabel_tabs()
-        else:
-            QMessageBox.warning(self,'Not so fast!',"Can't remove all components")
+        self.rescale_kin.clicked.connect(self.kin.rescale)
+        self.rescale_spec.clicked.connect(self.spec.rescale)
     
+        
+    def set_slider_limits(self, x_limits, y_limits):
+        self.x_slider.set_limits(x_limits)
+        self.y_slider.set_limits(y_limits)
+        
+        
+    def add_line(self,data):
+        self.data = data
+        
+        x = data.x
+        y = data.y
+        Z = data.z
+        
+        x_fit = data.x_fit
+        y_fit = data.y_fit
+        Z_fit = data.z_fit
+        
+        iy0 = np.argmax(y>=self.y_slider.value)
+        ix0 = np.argmax(x>=self.x_slider.value)
+
+        self.kin.set_line('raw',x,Z[:,iy0],**self.kwargs_raw)
+        self.kin.set_line('raw_inner',x,Z[:,iy0],**self.kwargs_raw_inner)
+        self.kin.set_line('fit',x_fit,Z_fit[:,iy0],color='red')           
+        self.kin.draw_idle()
+        
+        self.spec.set_line('raw',y,Z[ix0,:],**self.kwargs_raw)
+        self.spec.set_line('raw_inner',y,Z[ix0,:],**self.kwargs_raw_inner)
+        self.spec.set_line('fit',y_fit,Z_fit[ix0,:],color='red')           
+        self.spec.draw_idle()
+       
+        if self.auto_scale_kin.isChecked():
+           self.kin.rescale()
+           
+        if self.auto_scale_spec.isChecked():
+           self.spec.rescale()
+           
+        self.set_slider_limits((min(self.data.x),max(self.data.x)),
+                               (min(self.data.y),max(self.data.y)))
+           
+    
+    def refresh_kin_plot(self):
+        iy0 = np.argmax(self.data.y>=self.y_slider.value)
+
+        self.kin.set_line('raw',self.data.x,self.data.z[:,iy0],**self.kwargs_raw)
+        self.kin.set_line('raw_inner',self.data.x,self.data.z[:,iy0],**self.kwargs_raw_inner)
+        self.kin.set_line('fit',self.data.x_fit,self.data.z_fit[:,iy0],color='red')           
+        self.kin.draw_idle()
+       
+        if self.auto_scale_kin.isChecked():
+           self.kin.rescale()
+
+        
+    def refresh_spec_plot(self):
+        ix0 = np.argmax(self.data.x>=self.x_slider.value)
+        
+        self.spec.set_line('raw',self.data.y,self.data.z[ix0,:],**self.kwargs_raw)
+        self.spec.set_line('raw_inner',self.data.y,self.data.z[ix0,:],**self.kwargs_raw_inner)
+        self.spec.set_line('fit',self.data.y_fit,self.data.z_fit[ix0,:],color='red')           
+        self.spec.draw_idle()
+           
+        if self.auto_scale_spec.isChecked():
+           self.spec.rescale()
 
 
+class ContoursTab(QWidget):
+    
+    def __init__(self, figsize=(9,9), plot_style='linear'):
+        super().__init__()
+        
+        self.Z = ContourCanvas(figsize=figsize,layout=plot_style)
+        self.Z_fit = ContourCanvas(figsize=figsize,layout=plot_style)
+        self.residuum = ContourCanvas(figsize=figsize,layout=plot_style)
+        self.DADS = LineCanvas(figsize=figsize)
+
+        layout = QGridLayout()
+        layout.addWidget(self.Z,0,0)
+        layout.addWidget(self.Z_fit,0,1)
+        layout.addWidget(self.residuum,1,0)
+        layout.addWidget(self.DADS,1,1)
+        
+        layout.setRowStretch(0, 1)
+        layout.setRowStretch(1, 1)
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(1, 1)
+        
+        self.setLayout(layout)
+        
+    def make_plots(self, data, sc = 1):
+
+       zrange = np.array([np.median(data.z[data.z<0]),
+                 np.median(data.z[data.z>0])])
+       zrange = list(zrange*5*sc)#5 works well in the datasets I had so far. That's why this is defined as a stretch factor of 1.
+       if np.isnan(zrange).any():
+           zrange = [0,1]
+       
+       self.Z.set_contour(data.y,data.x,data.z,zrange=zrange)
+       self.Z_fit.set_contour(data.y_fit,data.x_fit,data.z_fit,zrange=zrange)
+       self.residuum.set_contour(data.y_fit,data.x_fit,data.residuum,zrange=zrange)
+       
+       self.DADS.clear_lines()
+       for n in range(data.no_comps):
+           self.DADS.set_line(f'f{n+1}',data.y_fit,data.DADS[n,:])
+       
+       self.Z.draw_idle()
+       self.Z_fit.draw_idle()
+       self.residuum.draw_idle()
+       self.DADS.draw_idle()
+       
+
+    def rescale(self):
+        self.Z.rescale()
+        self.Z_fit.rescale()
+        self.residuum.rescale()
+        self.DADS.rescale()
+        
+
+class PlotPanel(QWidget):
+    """
+    This Panel holds the different plots in various tabs.
+    """
+    
+    figsize_2D = (18,9)
+    figsize_3D = (9,9)
+    
+    def __init__(self,plot_style = 'linear'):
+        super().__init__()
+        
+        self.plot_style = plot_style
+        
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setFrameShadow(QFrame.Raised)
+
+        self.main_layout = QGridLayout(frame)
+        
+        self.create_ui()
+        self.create_connections()
+        
+        central = QVBoxLayout()
+        self.setLayout(central)
+        central.addWidget(frame)
+    
+    
+    def create_ui(self):
+        layout = self.main_layout
+        
+        Tabs = QTabWidget()
+        
+        self.lines = LinesTab(figsize=self.figsize_2D, plot_style=self.plot_style)
+        self.contours = ContoursTab(figsize=self.figsize_3D, plot_style=self.plot_style)
+        
+        Tabs.addTab(self.lines,'2D plots')
+        Tabs.addTab(self.contours,'3D plots')
+        
+        layout.addWidget(Tabs)
+        
+
+    def create_connections(self):
+        pass
+        # self.mode_input.currentTextChanged.connect(self.mode_changed)
+        # self.method_input.currentTextChanged.connect(self.method_changed)
+        
+        
+    def set_labels(self):
+       self.plot_kin.fig.suptitle(self.set.x_name)
+       self.plot_kin.set_labels(self.set.x_label+'/'+self.set.x_unit,
+                                self.set.z_label+'/'+self.set.z_unit)
+       self.plot_spec.fig.suptitle(self.set.y_name)
+       self.plot_spec.set_labels(self.set.y_label+'/'+self.set.y_unit,
+                                 self.set.z_label+'/'+self.set.z_unit)
+       
+       
+    def rescale(self):
+        self.lines.kin.rescale()
+        self.lines.spec.rescale()
+        self.contours.rescale()
+
+
+    
+# =============================================================================
+# Results Panel    
+# =============================================================================
+class ResultsPanel(QWidget):
+    """
+    This Panel shows results.
+    """
+    
+    requested_parm_transfer = Signal()
+    
+    def __init__(self):
+        super().__init__()
+     
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setFrameShadow(QFrame.Raised)
+
+        self.main_layout = QVBoxLayout(frame)
+        
+        Label(self.main_layout,'Results')
+        self.results_box = QPlainTextEdit(self)
+        self.results_box.setFixedWidth(300)
+        self.results_box.setReadOnly(True)
+        self.results_box.setFont(QFont("Courier New"))        
+        self.main_layout.addWidget(self.results_box)
+        
+        Button(self.main_layout,'Copy Results to p0', connect=self.requested_parm_transfer)
+        
+        central = QVBoxLayout()
+        self.setLayout(central)
+        central.addWidget(frame)
+
+
+    def appendText(self,text):
+        self.results_box.appendPlainText(text)
+        
+    def setText(self,text):
+        self.results_box.setPlainText(text)

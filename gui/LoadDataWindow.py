@@ -48,27 +48,32 @@ import traceback
 # =============================================================================
 
 class LoadDataWindow(QDialog):
-    def __init__(self):
+    
+    data_loaded = Signal(object)
+    
+    def __init__(self,settings=None,no_comps=1):
      try:
         super().__init__()
         self.setWindowTitle("Load Data")
         icon_path = Path(Path(__file__).parent,'Load_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(500, 200)
-        self.set = fancyfitSettings()
-        self.build_gui()
+        
+        self.no_comps = no_comps
+        
+        if not settings:
+            self.set = fancyfitSettings()
+        else:
+            self.set = settings
+        
+        self.create_ui()
+        
      except Exception as e:
          logger.exception('Load Data Window error')
          QMessageBox.critical(self,'error',f'Fatal Error in {__name__}: {e}')
 
-# =============================================================================
-# Functions:
-# =============================================================================
     
-    # =============================================================================
-    # GUI Functions:
-    # =============================================================================
-    def build_gui(self):
+    def create_ui(self):
         
         main_layout = QGridLayout()
         
@@ -90,8 +95,8 @@ class LoadDataWindow(QDialog):
     
         frame_action = QFrame()
         layout_action = QHBoxLayout()
-        Button(layout_action,'Load',command=self.on_load)
-        Button(layout_action,'Cancel',command=self.on_cancel)
+        Button(layout_action,'Load',connect=self.on_load)
+        Button(layout_action,'Cancel',connect=self.on_cancel)
         frame_action.setLayout(layout_action)
         main_layout.addWidget(frame_action)
         
@@ -99,18 +104,21 @@ class LoadDataWindow(QDialog):
     
     def on_load(self):
         x_path = self.x_path.entry_inputpath.text()
-        x = np.genfromtxt(x_path)
-        self.set.x_data_path = x_path
         y_path = self.y_path.entry_inputpath.text()
-        y = np.genfromtxt(y_path)
-        self.set.y_data_path = y_path
         z_path = self.z_path.entry_inputpath.text()
-        z = np.genfromtxt(z_path)
-        self.set.z_data_path = z_path
         
+        x = np.genfromtxt(x_path)
+        y = np.genfromtxt(y_path)
+        z = np.genfromtxt(z_path)        
+        
+        #Update User path for next time
+        self.set.x_data_path = x_path
+        self.set.y_data_path = y_path
+        self.set.z_data_path = z_path
         self.set.save()
         
-        self.data = data_class(x=x,y=y,z=z)
+        self.data = data_class(x=x,y=y,z=z,no_comps=self.no_comps)
+        self.data_loaded.emit(self.data)
         self.accept()
     
     def on_cancel(self):
@@ -118,12 +126,6 @@ class LoadDataWindow(QDialog):
         
         
         
-
-    #%% =============================================================================
-    # Data and Settings Functions:
-    # =============================================================================
-     
-    
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 if __name__ == "__main__":

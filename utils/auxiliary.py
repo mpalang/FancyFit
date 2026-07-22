@@ -28,25 +28,26 @@ logger = add_logger(__name__)
 
 @dataclass
 class data_class:
-    TestData: bool =False
-    Empty: bool = False
+    TestData: bool = False
     scaling_factors: tuple = (1,1,1)
     x: np.ndarray | None = None
     y: np.ndarray | None = None
     z: np.ndarray | None = None
+    no_comps: int = 1
     
-    def __post_init__(self):
-        settings = fancyfitSettings()
+    def __post_init__(self, settings = None):
+        if not settings:
+            settings = fancyfitSettings()
         
         if self.TestData:
             try:
                 self.z_full = np.genfromtxt(settings.z_testdata_path).T
-                self.y_full = np.sort(np.genfromtxt(settings.y_testdata_path),delimiter=',')
-                self.x_full = np.sort(np.genfromtxt(settings.x_testdata_path),delimiter=',')
+                self.y_full = np.sort(np.genfromtxt(settings.y_testdata_path,delimiter=','))
+                self.x_full = np.sort(np.genfromtxt(settings.x_testdata_path,delimiter=','))
             except:
-                raise ValueError('could not load testdata. specify path in settings.json')
+                raise ValueError('Could not load testdata. Specify path in settings.json')
                 
-        elif self.Empty or self.z is None:
+        elif self.x is None or self.y is None or self.z is None:
             self.z_full = np.full((2,2),np.nan)
             self.y_full = np.linspace(0,1,2)
             self.x_full = np.linspace(0,1,2)
@@ -59,12 +60,16 @@ class data_class:
         self.x = self.x_full*self.scaling_factors[0]
         self.y = self.y_full*self.scaling_factors[1]
         self.z = self.z_full*self.scaling_factors[2]
+        
         self.check_data()
+        
         self.x_fit = deepcopy(self.x)
         self.y_fit = deepcopy(self.y)
         self.z_fit = np.full(self.z.shape,np.nan)
+        
         self.residuum = np.full(self.z.shape,np.nan)
-        self.DADS = None
+        
+        self.DADS = np.column_stack([np.full(self.y_fit.shape,np.nan)]*self.no_comps).T
     
     def check_data(self):
         if self.z.shape == (np.squeeze(self.x.shape),np.squeeze(self.y.shape)):
@@ -149,6 +154,10 @@ class fancyfitSettings:
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
         self.y_data_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))
         self.x_data_path = str(Path(Path(__file__).parent.parent,'Test Data','t.txt'))
+        
+        self.z_testdata_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
+        self.y_testdata_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))
+        self.x_testdata_path = str(Path(Path(__file__).parent.parent,'Test Data','t.txt'))
 # =============================================================================
 # =============================================================================
 # =============================================================================

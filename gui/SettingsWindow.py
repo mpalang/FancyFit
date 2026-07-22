@@ -136,8 +136,8 @@ class SettingsWindow(QDialog):
         frame_data.setLayout(layout_data)
         main_layout.addWidget(frame_data,1,1)
         
-        Button(main_layout,'Save',command=self.on_save,layout_args=(2,0,1,2))
-        Button(main_layout,'Cancel',command=self.on_cancel,layout_args=(3,0,1,2))
+        Button(main_layout,'Save',connect=self.on_save,layout_args=(2,0,1,2))
+        Button(main_layout,'Cancel',connect=self.on_cancel,layout_args=(3,0,1,2))
         
         self.setLayout(main_layout)
     
@@ -147,6 +147,24 @@ class SettingsWindow(QDialog):
                 self.settings.__dict__[key] = self.input[key].text()
             elif isinstance(self.input[key], Spinbox):
                 self.settings.__dict__[key] = self.input[key].value()
+                
+    def reset_user_defaults(self):
+        self.set = fancyfitSettings()
+    
+    
+    def restore_defaults(self):#TODO reset to default settings
+        reply = QMessageBox.question(
+                self,
+                "Confirm",
+                "Do you want to delete all data?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+        if reply == QMessageBox.Yes:
+            self.statusBar().showMessage('restoring standard settings')
+            self.set.default()
+            self.set.save()
+            self.statusBar().showMessage('Ready...')
 
     def on_save(self):
         self.read_input()
