@@ -117,7 +117,7 @@ class LoadDataWindow(QDialog):
         self.set.z_data_path = z_path
         self.set.save()
         
-        self.data = data_class(x=x,y=y,z=z,no_comps=self.no_comps)
+        self.data = data_class(x=x,y=y,z=z)
         self.data_loaded.emit(self.data)
         self.accept()
     
