@@ -111,7 +111,7 @@ class SettingsWindow(QDialog):
         Label(layout_plot,'z 3D stretch',layout_args=(1,0))
         self.input['z_3Dstretch'] = Inputbox(layout_plot,default=str(self.settings.z_3Dstretch),layout_args=(1,1))
         Label(layout_plot,'plot layout',layout_args=(2,0))
-        self.input['plot_style'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
+        self.input['plot_style'] = Inputbox(layout_plot,default=str(self.settings.plot_style),layout_args=(2,1))
         Label(layout_plot,'axes_break',layout_args=(3,0))
         self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(3,1))
         frame_plot.setLayout(layout_plot)

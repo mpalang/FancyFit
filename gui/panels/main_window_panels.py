@@ -423,7 +423,7 @@ class FunctionsInputPanel(QWidget):
 # =============================================================================
 # Plot Panel
 # =============================================================================
-class LinesTab(QWidget):
+class LinesWidget(QWidget):
     
     data = dict()
     
@@ -448,10 +448,10 @@ class LinesTab(QWidget):
         self.create_connections()
     
     
-    def create_ui(self,figsize=(18,9),plot_style='linear'):
+    def create_ui(self,figsize=(18,9), plot_style='linear'):
         layout = QVBoxLayout()
 
-        self.kin = LineCanvas(figsize=figsize,layout=plot_style)
+        self.kin = LineCanvas(figsize=figsize,plot_style=plot_style)
         self.y_slider = Slider()
         self.rescale_kin = Button(text='rescale')
         self.auto_scale_kin = Button(text='auto scale')
@@ -495,7 +495,16 @@ class LinesTab(QWidget):
         self.y_slider.set_limits(y_limits)
         
         
-    def add_line(self,data):
+    def make_plots(self,data):
+        """
+        This function draws the lines.
+
+        Parameters
+        ----------
+        data : This is the fancy fit custon data_class.
+
+        """
+        
         self.data = data
         
         x = data.x
@@ -551,9 +560,10 @@ class LinesTab(QWidget):
            
         if self.auto_scale_spec.isChecked():
            self.spec.rescale()
+        
 
 
-class ContoursTab(QWidget):
+class ContoursWidget(QWidget):
     
     def __init__(self, figsize=(9,9), plot_style='linear'):
         super().__init__()
@@ -577,7 +587,6 @@ class ContoursTab(QWidget):
         self.setLayout(layout)
         
     def make_plots(self, data, sc = 1):
-
        zrange = np.array([np.median(data.z[data.z<0]),
                  np.median(data.z[data.z>0])])
        zrange = list(zrange*5*sc)#5 works well in the datasets I had so far. That's why this is defined as a stretch factor of 1.
@@ -636,22 +645,28 @@ class PlotPanel(QWidget):
         
         Tabs = QTabWidget()
         
-        self.lines = LinesTab(figsize=self.figsize_2D, plot_style=self.plot_style)
-        self.contours = ContoursTab(figsize=self.figsize_3D, plot_style=self.plot_style)
+        self.lines = LinesWidget(figsize=self.figsize_2D, plot_style=self.plot_style)
+        self.contours = ContoursWidget(figsize=self.figsize_3D, plot_style=self.plot_style)
         
         Tabs.addTab(self.lines,'2D plots')
         Tabs.addTab(self.contours,'3D plots')
         
         layout.addWidget(Tabs)
-        
+     
+    
+    def make_plots(self,data,plot_style='linear'):
+        self.lines.make_plots(data)
+        self.contours.make_plots(data)
 
-    def set_labels(self):
-       self.plot_kin.fig.suptitle(self.set.x_name)
-       self.plot_kin.set_labels(self.set.x_label+'/'+self.set.x_unit,
-                                self.set.z_label+'/'+self.set.z_unit)
-       self.plot_spec.fig.suptitle(self.set.y_name)
-       self.plot_spec.set_labels(self.set.y_label+'/'+self.set.y_unit,
-                                 self.set.z_label+'/'+self.set.z_unit)
+
+    def set_labels(self,x_name=None,x_label=None,x_unit=None,
+                       y_name=None,y_label=None,y_unit=None,
+                                   z_label=None,z_unit=None,):
+       self.lines.kin.fig.suptitle(x_name)
+       self.lines.kin.set_labels(x_label+'/'+x_unit,z_label+'/'+z_unit)
+       self.lines.spec.fig.suptitle(y_name)
+       self.lines.spec.set_labels(y_label+'/'+y_unit,
+                                 z_label+'/'+z_unit)
        
        
     def rescale(self):
@@ -696,7 +711,7 @@ class ResultsPanel(QWidget):
 
     def appendText(self,text):
         self.results_box.appendPlainText(text)
-        self.rsp.results_box.verticalScrollBar().setValue(
+        self.results_box.verticalScrollBar().setValue(
             self.results_box.verticalScrollBar().maximum())
     
     def setText(self,text):

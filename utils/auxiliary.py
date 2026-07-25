@@ -30,10 +30,16 @@ logger = add_logger(__name__)
 class data_class:
     TestData: bool = False
     scaling_factors: tuple = (1,1,1)
+    x_full: np.ndarray | None = None
+    y_full: np.ndarray | None = None
+    z_full: np.ndarray | None = None
     x: np.ndarray | None = None
     y: np.ndarray | None = None
     z: np.ndarray | None = None
-    no_comps: int = 1
+    x_fit: np.ndarray | None = None
+    y_fit: np.ndarray | None = None
+    z_fit: np.ndarray | None = None
+    DADS: np.ndarray | None = None
     
     def __post_init__(self, settings = None):
         if not settings:
@@ -71,6 +77,7 @@ class data_class:
         
         self.DADS = np.column_stack([np.full(self.y_fit.shape,np.nan)]*self.no_comps).T
     
+    
     def check_data(self):
         if self.z.shape == (np.squeeze(self.x.shape),np.squeeze(self.y.shape)):
             pass
@@ -80,6 +87,7 @@ class data_class:
         else:
             raise ValueError(f'Loading Data failed: Z-shape ({self.z.shape}) should be (x-shape,y-shape) (({self.x.shape},{self.y.shape}))')
             return False
+        
         
     def cut_data(self,x_low=None,x_high=None,y_low=None,y_high=None):    
         ixlow = np.argmax(self.x_full>float(x_low))
@@ -96,7 +104,15 @@ class data_class:
             
         return self
 
-
+    
+    @property
+    def no_comps(self):
+        if isinstance(self.DADS,np.ndarray):
+            return self.DADS.shape[0]
+        else:
+            return 1
+        
+        
 @dataclass
 class fancyfitSettings:
     def __init__(self):

@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QFrame,
     # QTabWidget,
-    QMessageBox,
+    # QMessageBox,
     # QTextEdit,
 )
 from PySide6.QtGui import QFont, QIcon
@@ -63,6 +63,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.logger = add_logger(__name__)
         self.setWindowTitle(f"Smore's Fancy Fit App v{__version__}")
+        icon_path = Path(Path(__file__).parent,'MainIcon.ico')
+        self.setWindowIcon(QIcon(str(icon_path)))
         
         #Geometrics
         self.resize(1300, 500)
@@ -200,19 +202,19 @@ class MainWindow(QMainWindow):
     # =============================================================================
     # Methods:
     # =============================================================================
+    def load_settings(self):
+        self.set = fancyfitSettings()
+        plt.rcParams.update({'font.size':12})  
+
+        self.FitFuns = FitFunctions()#Replace old FitFuns with new sympy method
+
+    
     @error_handler
     def initialize_data(self):
         if self.use_test_data:
             self.data = data_class(TestData=True)
         else:
             self.data = data_class()
-
-
-    def load_settings(self):
-        self.set = fancyfitSettings()
-        plt.rcParams.update({'font.size':12})  
-
-        self.FitFuns = FitFunctions()#Replace old FitFuns with new sympy method
 
 
     @error_handler
@@ -231,21 +233,23 @@ class MainWindow(QMainWindow):
     
     @error_handler
     def cut_data(self):
-        pass
+        self.data.cut_data(*self.dtp.x_limits,*self.dtp.y_limits)
+        self.plp.make_plots(self.data)
     
     
     @error_handler
     def uncut_data(self):
         pass
     
-    @error_handler
+    
+    # @error_handler
     def make_plots(self):        
-            
-        self.plp.lines.add_line(self.data)
-        self.plp.contours.make_plots(self.data)
-        
+        self.plp.make_plots(self.data)
         self.plp.rescale()
-
+        self.plp.set_labels(self.set.x_name,self.set.x_label,self.set.x_unit,
+                            self.set.y_name,self.set.y_label,self.set.y_unit,
+                            self.set.z_label,self.set.z_unit)
+        
         self.status_label1.setText(f'Data Loaded: {len(self.data.x)} x points, {len(self.data.y)} y points and {str(self.data.z.shape).replace(',','x')} z points')
         
 
@@ -259,15 +263,12 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('settings updated')
         
     
+    @error_handler
     def open_functionbuilder(self):
-      try:
         from gui.FunctionBuilder import FunctionBuilder
         fbw = FunctionBuilder()
         if fbw.exec():
             self.statusBar().showMessage('Function added',2000)             
-
-      except Exception as e:
-          QMessageBox.critical(self,'Error',e)
           
     
     def save_results(self):
@@ -403,7 +404,7 @@ class MainWindow(QMainWindow):
 # ENTRY POINT (Spyder-safe)
 # ---------------------------
 if __name__ == "__main__":
-   
+    
     # Create QApplication only once
     app = QApplication.instance()
     if app is None:
