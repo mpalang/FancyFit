@@ -30,10 +30,8 @@ from PySide6.QtWidgets import (
     QStyle,
     QFileDialog,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,Signal
 from PySide6.QtWidgets import QSizePolicy
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
 
 from utils.logger import add_logger
 logger = add_logger(__name__)
@@ -48,9 +46,8 @@ class Checkbox(QCheckBox):
         if root:
             root.addWidget(self,*grid)
 
-
 class Dropdown(QComboBox):
-    def __init__(self,root=None,items=None,standard=None,command=lambda:None,grid=(),layout_args=()):
+    def __init__(self,root=None,items=None,layout_args=(),standard=None,command=lambda:None,grid=()):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid 
@@ -62,7 +59,7 @@ class Dropdown(QComboBox):
         root.addWidget(self,*layout_args)
   
 class Spinbox(QSpinBox):
-    def __init__(self,root=None,lower=0,upper=100,standard=0,layout_args=(),grid=(),expand=False):
+    def __init__(self,root=None,standard=0,layout_args=(),lower=0,upper=100,grid=(),expand=False):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid        
@@ -79,7 +76,7 @@ class Spinbox(QSpinBox):
             )  
 
 class SpinboxDouble(QDoubleSpinBox):
-    def __init__(self,root=None,default=0,limits=(-1e9,1e9),grid=()):
+    def __init__(self,root=None,default=0,grid=(),limits=(-1e9,1e9)):
         super().__init__()
         self.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         if any(limits):
@@ -90,18 +87,19 @@ class SpinboxDouble(QDoubleSpinBox):
             root.addWidget(self,*grid)
 
 class Button(QPushButton):
-    def __init__(self,root=None,name='',command = lambda:None,grid=(),layout_args=(),expand=False):
-        super().__init__(name)
+    def __init__(self,root=None,text='',layout_args=(),connect = lambda:None,grid=(),expand=False):
+        super().__init__(text)
         if grid and not layout_args:
             layout_args = grid    
         if root:
             root.addWidget(self,*layout_args)
-        self.clicked.connect(command)
+        self.clicked.connect(connect)
         if expand:
             self.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
-                
+              
+            
 class Inputbox(QLineEdit):
     def __init__(self,root=None,default='',layout_args=(),grid=(),expand=False):
         super().__init__()
@@ -117,8 +115,9 @@ class Inputbox(QLineEdit):
             QSizePolicy.Policy.Fixed
             )
 
+
 class Textbox(QTextEdit):
-    def __init__(self, root=None, geometry=None, default='', layout_args=(), grid=()):
+    def __init__(self, root=None, default='', layout_args=(), geometry=None,  grid=()):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid
@@ -127,8 +126,9 @@ class Textbox(QTextEdit):
         if root:
             root.addWidget(self,*layout_args)
     
+    
 class Label(QLabel):
-    def __init__(self,root=None,text='', bold=False,grid=(),layout_args=()):
+    def __init__(self,root=None,text='',layout_args=(), bold=False,grid=()):
         super().__init__(text)
         if grid and not layout_args:
             layout_args = grid
@@ -139,16 +139,13 @@ class Label(QLabel):
 
 
 class Slider(QWidget):
-    def __init__(
-                self,
-                root=None,
-                value_range=(0, 100),
-                command=lambda: None,
-                label_format="plain",
-                ):
+    
+    moved = Signal(float)
+    
+    def __init__(self,root=None,value_range=(0, 100), label_format="plain"):
+        
         super().__init__()
 
-        self.command = command
         self.label_format = label_format
 
         layout = QHBoxLayout(self)
@@ -166,9 +163,15 @@ class Slider(QWidget):
 
         layout.addWidget(self.slider)
         layout.addWidget(self.label)
+        
+        self.on_slide()
 
         if root:
             root.addWidget(self)
+            
+    def set_limits(self,limits):
+        self.slider.setRange(*limits)
+        self.slider.setValue((limits[0] + limits[1]) // 2)
 
     def format_value(self, value):
         if self.label_format == "sci":
@@ -178,134 +181,13 @@ class Slider(QWidget):
     def on_slide(self):
         value = self.slider.value()
         self.label.setText(self.format_value(value))
-        self.command()
+        self.moved.emit(value)
+        
+    @property
+    def value(self):
+        return self.slider.value()
            
-
-class ParmRow(QWidget):
-    def __init__(self,name,p0,p_lower,p_upper):
-        super().__init__()
-        self.setSizePolicy(QSizePolicy.Policy.Expanding,
-                           QSizePolicy.Policy.Expanding)
-        layout = QHBoxLayout(self)
-        self.name_input = Inputbox(layout,default=name)
-        self.p0_input = Inputbox(layout,default=str(p0))
-        self.p_lower_input = Inputbox(layout,default=str(p_lower))
-        self.p_upper_input = Inputbox(layout,default=str(p_upper))
-                 
-        self.p0_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_lower_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_upper_input.textChanged.connect(self.validate_on_the_fly)
-        
-    def validate_on_the_fly(self):
-        try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
-            else:
-                self.setStyleSheet("background:#ffcccc;")
-                return False
-        except:
-            pass #We don't need to do anything here yet...otherwise too many errors are raised.
-        
-    def validate(self):
-        try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
-            else:
-                self.setStyleSheet("background:#ffcccc;")
-                return False
-        except Exception as e:
-            # logger.error(f'Problem with parameter input:\n {e}') #can activate for debugging. Otherwise it would write too much if user is typing.
-            raise ValueError(f'Make sure you only put in numbers:\n {e}')
-            return False
-  
-    def values(self):
-        if self.validate():
-            name = self.name_input.text()
-            p0 = float(self.p0_input.text())
-            p_lower = float(self.p_lower_input.text())
-            p_upper = float(self.p_upper_input.text())
-            
-            return name,p0,p_lower,p_upper
-        else:
-            QMessageBox.critical(self,'Check Parameters','Please make sure parameter inputs are valid.')
-        
-        
-class ParmsPanel(QWidget):
-    def __init__(self,FitFuns,fun_name=None):
-        super().__init__()
-        self.FitFuns = FitFuns
-        self.fun_name = fun_name
-        self.layout = QGridLayout()
-        self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
-        self.fun_input = (Dropdown(self.layout,
-                                    FitFuns.names(),
-                                    standard=fun_name,
-                                    command=lambda:self.on_function_change(),
-                                    grid=(0,0,1,4)
-                                    ))
-        Label(self.layout,'name',layout_args=(1,0))
-        Label(self.layout,'p0',layout_args=(1,1))
-        Label(self.layout,'p-',layout_args=(1,2))
-        Label(self.layout,'p+',layout_args=(1,3))
-    
-        line = QFrame(self)
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        self.layout.addWidget(line, 2, 0, 1, 4)
-        
-        self.build_parms_input()
-        
-        self.setLayout(self.layout)
-    
-    def build_parms_input(self):
-        self.Parms=QWidget()
-        Parms_layout=QVBoxLayout()
-        Parms_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
-        fun_name = self.fun_input.currentText()
-        
-        self.parm_rows=[]
-        for n, parm in enumerate(self.FitFuns.funs[fun_name].parm_names):
-            parm_row = (ParmRow(parm,
-                          self.FitFuns.funs[fun_name].p0[n],
-                          self.FitFuns.funs[fun_name].p_lower[n],
-                          self.FitFuns.funs[fun_name].p_upper[n])) 
-            Parms_layout.addWidget(parm_row)
-            self.parm_rows.append(parm_row)
-            
-        Parms_layout.addStretch()
-        self.Parms.setLayout(Parms_layout)
-        self.layout.addWidget(self.Parms,3,0,1,4)
-        
-    def on_function_change(self):
-        self.Parms.deleteLater()
-        self.build_parms_input()
-    
-    def values(self):
-        fields = [row.values() for row in self.parm_rows]
-        
-        func = self.FitFuns.funs[self.fun_input.currentText()].copy(
-                            [d[0] for d in fields],#parm names
-                            [d[1] for d in fields],#p0
-                            [d[2] for d in fields],#p lower
-                            [d[3] for d in fields]#p upper
-                            )
-            
-        return func
-        
+       
         
 def open_path(root,default_path = ''):
     class open_path_class(QWidget):
@@ -331,4 +213,61 @@ def open_path(root,default_path = ''):
     root.addWidget(w)
     
     return w
+
+
+# =============================================================================
+# Parm Row Widget used in ParmsPanel and FunctionBuilder       
+# =============================================================================
+class ParmRow(QWidget):
+    def __init__(self,name,p0,p_lower,p_upper):
+        super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,
+                           QSizePolicy.Policy.Expanding)
+        layout = QHBoxLayout(self)
+        self.name_input = Inputbox(layout,default=name)
+        self.p0_input = Inputbox(layout,default=str(p0))
+        self.p_lower_input = Inputbox(layout,default=str(p_lower))
+        self.p_upper_input = Inputbox(layout,default=str(p_upper))
+        self.fix_button = Button(layout,'fix')
+
+        self.fix_button.setCheckable(True)
+        self.fix_button.setStyleSheet("""
+                                        QPushButton:checked {
+                                            background-color: lightgreen;
+                                        }
+                                    """)
+                 
+        self.p0_input.textChanged.connect(self.validate)
+        self.p_lower_input.textChanged.connect(self.validate)
+        self.p_upper_input.textChanged.connect(self.validate)
+        
+    def validate(self):
+        try:
+            ok = (
+                float(self.p_lower_input.text())
+                <= float(self.p0_input.text())
+                <= float(self.p_upper_input.text())
+                )
+            if ok:
+               self.setStyleSheet("")
+               return True
+            else:
+                self.setStyleSheet("background:#ffcccc;")
+                return False
+        except:
+            pass #We don't need to do anything here yet...otherwise too many errors are raised.
+        
+
+    @property
+    def values(self):
+        if self.validate():
+            name = self.name_input.text()
+            p0 = float(self.p0_input.text())
+            p_lower = float(self.p_lower_input.text())
+            p_upper = float(self.p_upper_input.text())
+            fixed = self.fix_button.isChecked()
+            
+            return name,p0,p_lower,p_upper,fixed
+        else:
+            ErrorBox('Check Parameters','Please make sure parameter inputs are valid.')
         

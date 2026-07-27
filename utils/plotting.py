@@ -50,8 +50,9 @@ def make_cmap(name='fancy',n_levels=40,zrange=(-1,1)):
     return cmap,levels
 
 
+
 # ---------------------------
-# PLOT WIDGET WRAPPER
+# PLOT WIDGET
 # ---------------------------
 
 def get_break(x,axis_break):
@@ -69,7 +70,6 @@ def get_break(x,axis_break):
     return ix0
 
 class BaseCanvas(FigureCanvasQTAgg):
-
     def __init__(self, figsize = (6,4), dpi=80):
         self.fig = Figure(figsize=figsize,
                           dpi=dpi)
@@ -86,24 +86,28 @@ class BaseCanvas(FigureCanvasQTAgg):
         self.axes = {}
         self.draw_idle()
         
-        
+    
+    
+# =============================================================================
+# Line Canvas     
+# =============================================================================
 class LineCanvas(BaseCanvas):
-
-    def __init__(self, layout='linear',figsize=None, axis_break=2, dpi=100):
+    def __init__(self, plot_style='linear',figsize=None, axis_break=2, dpi=100):
         super().__init__(figsize=figsize,dpi=dpi)
 
         self.lines = {}
-        self.set_layout(layout)
+        self.set_plot_style(plot_style)
         self.axis_break=axis_break
 
-    def set_layout(self,layout):
-        if layout=='linear':
+    def set_plot_style(self,plot_style):
+        if plot_style=='linear':
             self._layout = 'linear'
             self.clear()
             self.axes["main"] = self.fig.add_subplot(111)
             self.axes['main'].axhline(0,color='k',linewidth=self.axes['main'].spines['left'].get_linewidth())
             self.draw_idle()
-        elif layout=='linlog':
+        
+        elif plot_style=='linlog':
             self._layout = 'linlog'
             self.clear()
             gs = self.fig.add_gridspec(
@@ -121,6 +125,9 @@ class LineCanvas(BaseCanvas):
                                             labelleft=False
                                         )
             self.draw_idle()
+            
+        else:
+            raise ValueError(f'Unknown plot style: {plot_style}.')
             
 
     def set_line(self,name, x, y, axis_break=2, **kwargs):
@@ -154,7 +161,20 @@ class LineCanvas(BaseCanvas):
     def set_labels(self,xlabel,ylabel):
         self.axes['main'].set_xlabel=xlabel
         self.axes['main'].set_ylabel=ylabel
-
+        self.draw_idle()
+        
+        
+    def rescale(self):
+        for ax in self.axes:
+            self.axes[ax].relim()
+            self.axes[ax].autoscale_view()
+        self.draw_idle()
+        
+        
+        
+# =============================================================================
+# Contour Canvas
+# =============================================================================
 class ContourCanvas(BaseCanvas):
     def __init__(self, layout='linear',figsize=None, dpi=80):
         super().__init__(figsize=figsize,dpi=dpi)
@@ -179,16 +199,14 @@ class ContourCanvas(BaseCanvas):
             self._layout = 'linlog'
             self.clear()
 
-            gs = self.fig.add_gridspec(2, 1, 
-                                       height_ratios=(2, 1),
-                                       hspace=0.01
-                                       )
+            gs = self.fig.add_gridspec(2, 1, height_ratios=(2, 1), hspace=0.01)
 
             self.axes["log"] = self.fig.add_subplot(gs[0, 0])
             self.axes["main"] = self.fig.add_subplot(gs[1, 0])
             
             self.axes["log"].set_yscale('log')
             self.axes["log"].set_xticks([])
+
 
     def set_contour(self, x, y, Z, zrange=(-1,1), axis_break=2, **kwargs):
         cmap,levels = make_cmap(zrange=zrange)
@@ -222,3 +240,9 @@ class ContourCanvas(BaseCanvas):
                                                 colors=cmap,levels=levels, 
                                                 extend='both')
             
+    
+    def rescale(self):
+        for ax in self.axes:
+            self.axes[ax].relim()
+            self.axes[ax].autoscale_view()
+        self.draw_idle()

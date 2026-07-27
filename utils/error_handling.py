@@ -35,3 +35,7 @@ def error_handler(func):
             ErrorBox('error',f'Fatal Error in {func.__name__}:\n {e}',
                      details=traceback.format_exc(),parent=self)
     return wrapper
+
+
+# def handle_exceptions(exc_type, exc_value, exc_tb):
+    # logger

@@ -33,15 +33,13 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-# Add personal modules:
-if str(Path(__file__).parent.parent) not in sys.path:
-      sys.path.append(str(Path(__file__).parent.parent))
-
 from utils.logger import add_logger  
 from utils.auxiliary import fancyfitSettings
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,Checkbox)
 
-logger = add_logger(__name__)
+from utils.logger import add_logger
+from utils.error_handling import error_handler
+
 import traceback
   
 # =============================================================================
@@ -50,9 +48,11 @@ import traceback
 # =============================================================================
 
 class SettingsWindow(QDialog):
+    
+    @error_handler
     def __init__(self,settings= None):
-     try:
         super().__init__()
+        self.logger = add_logger(__name__)
         self.setWindowTitle("Settings")
         icon_path = Path(Path(__file__).parent,'Settings_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
@@ -63,9 +63,7 @@ class SettingsWindow(QDialog):
             self.settings = fancyfitSettings()
         self.input = {}
         self.build_gui()
-     except Exception as e:
-         logger.error(traceback.format_exc())
-         QMessageBox.critical(self,'error',f'Fatal Error in {__name__}: {e}')
+
 
 # =============================================================================
 # Functions:
@@ -97,7 +95,7 @@ class SettingsWindow(QDialog):
         layout_fit = QGridLayout()
         Label(layout_fit,'Fit Settings',bold=True,layout_args=(0,0))
         Label(layout_fit,'Iterations',layout_args=(1,0))
-        self.input['fit_iterations'] = Spinbox(layout_fit,1,10,self.settings.fit_iterations,layout_args=(1,1))
+        self.input['fit_iterations'] = Spinbox(layout_fit,self.settings.fit_iterations,(1,1),1,10)
         Label(layout_fit,'Default Fit Method',layout_args=(2,0))
         self.input['default_method'] = Inputbox(layout_fit,default=self.settings.default_method,layout_args=(2,1))
         Label(layout_fit,'Use IRF',layout_args=(3,0))
@@ -113,7 +111,7 @@ class SettingsWindow(QDialog):
         Label(layout_plot,'z 3D stretch',layout_args=(1,0))
         self.input['z_3Dstretch'] = Inputbox(layout_plot,default=str(self.settings.z_3Dstretch),layout_args=(1,1))
         Label(layout_plot,'plot layout',layout_args=(2,0))
-        self.input['plot_style'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(2,1))
+        self.input['plot_style'] = Inputbox(layout_plot,default=str(self.settings.plot_style),layout_args=(2,1))
         Label(layout_plot,'axes_break',layout_args=(3,0))
         self.input['axes_break'] = Inputbox(layout_plot,default=str(self.settings.axes_break),layout_args=(3,1))
         frame_plot.setLayout(layout_plot)
@@ -138,8 +136,8 @@ class SettingsWindow(QDialog):
         frame_data.setLayout(layout_data)
         main_layout.addWidget(frame_data,1,1)
         
-        Button(main_layout,'Save',command=self.on_save,layout_args=(2,0,1,2))
-        Button(main_layout,'Cancel',command=self.on_cancel,layout_args=(3,0,1,2))
+        Button(main_layout,'Save',connect=self.on_save,layout_args=(2,0,1,2))
+        Button(main_layout,'Cancel',connect=self.on_cancel,layout_args=(3,0,1,2))
         
         self.setLayout(main_layout)
     
@@ -149,6 +147,24 @@ class SettingsWindow(QDialog):
                 self.settings.__dict__[key] = self.input[key].text()
             elif isinstance(self.input[key], Spinbox):
                 self.settings.__dict__[key] = self.input[key].value()
+                
+    def reset_user_defaults(self):
+        self.set = fancyfitSettings()
+    
+    
+    def restore_defaults(self):#TODO reset to default settings
+        reply = QMessageBox.question(
+                self,
+                "Confirm",
+                "Do you want to delete all data?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+        if reply == QMessageBox.Yes:
+            self.statusBar().showMessage('restoring standard settings')
+            self.set.default()
+            self.set.save()
+            self.statusBar().showMessage('Ready...')
 
     def on_save(self):
         self.read_input()
@@ -158,25 +174,21 @@ class SettingsWindow(QDialog):
         self.close()
         
         
-        
-
-    #%% =============================================================================
-    # Data and Settings Functions:
-    # =============================================================================
-     
-    
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
+# ---------------------------
 if __name__ == "__main__":
+    
+    if str(Path(__file__).parent.parent) not in sys.path:
+        sys.path.append(str(Path(__file__).parent.parent))
+    
+    # Create QApplication only once
     app = QApplication.instance()
-
+    app.setStyle("Fusion")
     if app is None:
         app = QApplication(sys.argv)
-
+    
     window = SettingsWindow()
     window.show()
-
-    if not QApplication.instance().startingUp():
-        sys.exit(app.exec())
-    else:
-        app.exec()
+    
+    app.exec()
