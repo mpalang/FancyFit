@@ -33,6 +33,8 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
+from PySide6.QtCore import Signal
+
 from utils.logger import add_logger  
 from utils.auxiliary import fancyfitSettings
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,Checkbox)
@@ -48,6 +50,10 @@ import traceback
 # =============================================================================
 
 class SettingsWindow(QDialog):
+    
+    change_flag = Signal(dict)
+    change_dict = {'function_panel':False,
+                   'needs_replot':False,}
     
     @error_handler
     def __init__(self,settings= None):
@@ -99,7 +105,7 @@ class SettingsWindow(QDialog):
         Label(layout_fit,'Default Fit Method',layout_args=(2,0))
         self.input['default_method'] = Inputbox(layout_fit,default=self.settings.default_method,layout_args=(2,1))
         Label(layout_fit,'Use IRF',layout_args=(3,0))
-        self.input['use_irf'] = Checkbox(layout_fit,default=self.settings.use_irf,grid=(3,1))
+        self.input['use_irf'] = Checkbox(layout_fit,bool(self.settings.use_irf),(3,1),connect=self.fit_settings_changed)
         frame_fit.setLayout(layout_fit)
         main_layout.addWidget(frame_fit,0,1)
         
@@ -147,6 +153,7 @@ class SettingsWindow(QDialog):
                 self.settings.__dict__[key] = self.input[key].text()
             elif isinstance(self.input[key], Spinbox):
                 self.settings.__dict__[key] = self.input[key].value()
+        
                 
     def reset_user_defaults(self):
         self.set = fancyfitSettings()
@@ -165,10 +172,15 @@ class SettingsWindow(QDialog):
             self.set.default()
             self.set.save()
             self.statusBar().showMessage('Ready...')
+    
+    
+    def fit_settings_changed(self):
+        self.change_dict['fit_settings'] = True
 
     def on_save(self):
         self.read_input()
         self.accept()
+    
     
     def on_cancel(self):
         self.close()

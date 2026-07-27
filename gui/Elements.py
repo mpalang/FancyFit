@@ -36,15 +36,19 @@ from PySide6.QtWidgets import QSizePolicy
 from utils.logger import add_logger
 logger = add_logger(__name__)
 
+from utils.error_handling import ErrorBox
+
 # ---------------------------
 # SIMPLE PLOT WIDGET WRAPPER
 # --------------------------
 class Checkbox(QCheckBox):
-    def __init__(self,root=None,default=True,grid=()):
+    def __init__(self,root=None,default=True,grid=(),connect=lambda:None):
         super().__init__()
         self.setChecked(default)
         if root:
             root.addWidget(self,*grid)
+        if connect:
+            self.statChanged.connect(connect)
 
 class Dropdown(QComboBox):
     def __init__(self,root=None,items=None,layout_args=(),standard=None,command=lambda:None,grid=()):
