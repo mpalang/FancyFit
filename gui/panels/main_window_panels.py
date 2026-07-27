@@ -227,12 +227,12 @@ class ParmsPanel(QWidget):
         self.fun_name = fun_name
         self.layout = QGridLayout()
         
-        self.fun_input = (Dropdown(self.layout,
+        self.fun_input = Dropdown(self.layout,
                                     FitFuns.names(),
                                     standard=fun_name,
                                     command=lambda:self.on_function_change(),
                                     grid=(0,0,1,4)
-                                    ))
+                                    )
         Label(self.layout,'name',layout_args=(1,0))
         Label(self.layout,'p0',layout_args=(1,1))
         Label(self.layout,'p-',layout_args=(1,2))
@@ -257,10 +257,10 @@ class ParmsPanel(QWidget):
         
         self.parm_rows=[]
         for n, parm in enumerate(self.FitFuns.funs[fun_name].parm_names):
-            parm_row = (ParmRow(parm,
+            parm_row = ParmRow(parm,
                           self.FitFuns.funs[fun_name].p0[n],
                           self.FitFuns.funs[fun_name].p_lower[n],
-                          self.FitFuns.funs[fun_name].p_upper[n])) 
+                          self.FitFuns.funs[fun_name].p_upper[n])
             Parms_layout.addWidget(parm_row)
             self.parm_rows.append(parm_row)
             
@@ -335,7 +335,7 @@ class FunctionsInputPanel(QWidget):
         layout_header = QGridLayout()
         Label(layout_header, 'Common Parms.', (0,0))
         self.common_parms_input = Inputbox(layout_header, '', (0,1))
-        Button(layout_header,'add component', (1,0), connect=self.add_component)
+        Button(layout_header,'add component', (1,0), connect=lambda:self.add_component())
         Button(layout_header,'remove component', (1,1), connect=self.remove_component)
         layout.addLayout(layout_header)
         
@@ -343,7 +343,12 @@ class FunctionsInputPanel(QWidget):
         self.parm_tabs.setFixedSize(250, 300)
         
         layout.addWidget(self.parm_tabs)
-
+    
+    
+    @property
+    def tab_count(self):
+        return sum(1 for i in range(self.parm_tabs.count())
+            if "IRF" not in self.parm_tabs.tabText(i))
         
     def set_defaults(self,defaults):
        for fun_name in defaults:
@@ -351,7 +356,7 @@ class FunctionsInputPanel(QWidget):
            
    
     def add_irf(self,irf_function):
-        if irf_function in self.FitFuns.funs.keys():
+        if irf_function not in self.FitFuns.funs.keys():
             irf_function = 'gauss'
         tab = ParmsPanel(self.FitFuns,fun_name=irf_function)
         self.parm_tabs.addTab(tab,'IRF')
@@ -359,15 +364,15 @@ class FunctionsInputPanel(QWidget):
    
     def add_component(self,fun_name='exp_decay',tab_name=None):  
            if not tab_name:
-               tab_name = 'fun'+str(self.parm_tabs.count()+1)      
+               tab_name = 'fun'+str(self.tab_count+1)      
            tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
-           self.parm_tabs.addTab(tab,tab_name)
+           self.parm_tabs.insertTab(self.tab_count,tab,tab_name)
            self.relabel_tabs()
-           self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
+           # self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
 
 
     def relabel_tabs(self):
-       for i in range(self.parm_tabs.count()):
+       for i in range(self.tab_count):
            if not 'IRF' in self.parm_tabs.tabText(i):
                self.parm_tabs.setTabText(i, f"fun{i+1}")
                
@@ -402,21 +407,23 @@ class FunctionsInputPanel(QWidget):
     @property
     def irf_index(self):
         irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
-        return irf_index
+        if irf_index:
+            return irf_index[0]
+        else:
+            None
 
     
     @property
     def IRF(self):
         if self.irf_index:
-            IRF = self.parm_tabs.widget(self.irf_index[0]).values()
+            return self.parm_tabs.widget(self.irf_index).values
         else:
-            IRF = None
-        return IRF
+            return None
        
         
     @property
     def Fit_Funs(self):
-        Fit_Funs = [self.parm_tabs.widget(n).values for n in range(self.parm_tabs.count()) if n not in self.irf_index]  
+        Fit_Funs = [self.parm_tabs.widget(n).values for n in range(self.parm_tabs.count()) if n != self.irf_index]  
         return Fit_Funs
     
     

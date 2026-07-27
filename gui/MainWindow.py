@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
 
         self.dtp = DataTweakPanel()
         self.fsp = FitSettingsPanel(defaults={'method':self.set.default_method})
-        self.fip = FunctionsInputPanel(defaults=self.set.default_funs)
+        self.fip = FunctionsInputPanel(defaults=self.set.default_funs, irf = self.set.use_irf)
         
         layout.addWidget(self.dtp)
         layout.addWidget(self.fsp)
@@ -287,8 +287,8 @@ class MainWindow(QMainWindow):
     def prepare_fit(self):
         # Prepare data and settings for global fit
         data = self.data
-        irf_index = self.fip.irf_index
         Fun_Objs = self.fip.Fit_Funs
+        irf_index = self.fip.irf_index
         IRF = self.fip.IRF
 
         funs = [fun_obj.func for fun_obj in Fun_Objs]
@@ -308,7 +308,13 @@ class MainWindow(QMainWindow):
                 'common_parms': cp,
                 'method': self.fsp.method,
                 'iterations': self.set.fit_iterations,
-                 }
+        }
+        if IRF:
+            settings['irf'] = IRF.func
+            settings['irf_parms'] = IRF.parm_names
+            settings['irf_p0'] = IRF.p0
+            settings['irf_p_lower'] = IRF.p_lower
+            settings['irf_p_upper'] = IRF.p_upper
         
         return data.x, data.y, data.z.T, settings
     

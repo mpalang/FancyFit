@@ -164,7 +164,7 @@ class fancyfitSettings:
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
         self.default_method = 'Powell'
-        self.use_irf = False
+        self.use_irf = 'gauss'
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
