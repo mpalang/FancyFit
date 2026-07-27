@@ -276,14 +276,19 @@ class ParmsPanel(QWidget):
     
     @property
     def values(self):
-        fields = [row.values() for row in self.parm_rows]
-        
+        fields = [row.values for row in self.parm_rows]
+
+        parm_names = [d[0] for d in fields]
+        p0 = np.array([d[1] for d in fields])
+        p_lower = np.array([d[2] for d in fields])#array definitio makes it easier to set fixed values.
+        p_upper = np.array([d[3] for d in fields])
+        fixed = np.array([d[4] for d in fields])
+        p_lower[fixed] = p0[fixed]
+        p_upper[fixed] = p0[fixed]
+
         func = self.FitFuns.funs[self.fun_input.currentText()].copy(
-                            [d[0] for d in fields],#parm names
-                            [d[1] for d in fields],#p0
-                            [d[2] for d in fields],#p lower
-                            [d[3] for d in fields]#p upper
-                            )
+                            parm_names,
+                            list(p0),list(p_lower),list(p_upper))
             
         return func
     

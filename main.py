@@ -27,7 +27,7 @@ if __name__=='__main__':
         with open(Path('utils/theme.qss'), "r") as f:
             app.setStyleSheet(f.read())
     
-    icon_path = Path(Path(__file__).parent,'icon.ico')
+    icon_path = Path(Path(__file__).parent,'gui/MainIcon.ico')
     app.setWindowIcon(QIcon(str(icon_path)))
     window = MainWindow()
     window.setWindowIcon(QIcon(str(icon_path)))
