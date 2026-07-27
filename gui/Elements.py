@@ -228,12 +228,20 @@ class ParmRow(QWidget):
         self.p0_input = Inputbox(layout,default=str(p0))
         self.p_lower_input = Inputbox(layout,default=str(p_lower))
         self.p_upper_input = Inputbox(layout,default=str(p_upper))
+        self.fix_button = Button(layout,'fix')
+
+        self.fix_button.setCheckable(True)
+        self.fix_button.setStyleSheet("""
+                                        QPushButton:checked {
+                                            background-color: lightgreen;
+                                        }
+                                    """)
                  
-        self.p0_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_lower_input.textChanged.connect(self.validate_on_the_fly)
-        self.p_upper_input.textChanged.connect(self.validate_on_the_fly)
+        self.p0_input.textChanged.connect(self.validate)
+        self.p_lower_input.textChanged.connect(self.validate)
+        self.p_upper_input.textChanged.connect(self.validate)
         
-    def validate_on_the_fly(self):
+    def validate(self):
         try:
             ok = (
                 float(self.p_lower_input.text())
@@ -249,32 +257,17 @@ class ParmRow(QWidget):
         except:
             pass #We don't need to do anything here yet...otherwise too many errors are raised.
         
-    def validate(self):
-        try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
-            else:
-                self.setStyleSheet("background:#ffcccc;")
-                return False
-        except Exception as e:
-            # logger.error(f'Problem with parameter input:\n {e}') #can activate for debugging. Otherwise it would write too much if user is typing.
-            raise ValueError(f'Make sure you only put in numbers:\n {e}')
-            return False
-  
+
+    @property
     def values(self):
         if self.validate():
             name = self.name_input.text()
             p0 = float(self.p0_input.text())
             p_lower = float(self.p_lower_input.text())
             p_upper = float(self.p_upper_input.text())
+            fixed = self.fix_button.isChecked()
             
-            return name,p0,p_lower,p_upper
+            return name,p0,p_lower,p_upper,fixed
         else:
             ErrorBox('Check Parameters','Please make sure parameter inputs are valid.')
         

@@ -213,21 +213,22 @@ class fitFunction:
         copy_func.p_upper=p_upper
         
         return copy_func
-                
+ 
+
+def conv(y, yc):
+    yc = np.asarray(yc, dtype=float)
+    yc = yc / np.sum(yc) #normalize convolution function
+    y_conv = np.convolve(y, yc, mode="full")
+    # center kernel
+    k = len(yc) // 2
+    return y_conv[k:k + len(y)]
+               
 class FitFunctions:
     def __init__(self):
         self.user_dir = Path(QStandardPaths.writableLocation(
                 QStandardPaths.StandardLocation.AppLocalDataLocation))
         self.functions_file = self.user_dir / 'FitFunctions.json'
         self.funs={}
-        
-        def conv(y, yc):
-            yc = np.asarray(yc, dtype=float)
-            yc = yc / np.sum(yc) #normalize convolution function
-            y_conv = np.convolve(y, yc, mode="full")
-            # center kernel
-            k = len(yc) // 2
-            return y_conv[k:k + len(y)]
         self.conv = conv
         
         self.load()

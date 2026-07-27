@@ -24,5 +24,5 @@ The bundled .exe should work regardless.
 
 Bundle as windows .exe:
 
-pyinstaller --windowed --icon=icon.ico --distpath WindowsApp --workpath build  --name FancyFit main.py
+pyinstaller --windowed --icon=icon.ico --distpath WindowsApp --workpath build --specpath build  --name FancyFit main.py
 
