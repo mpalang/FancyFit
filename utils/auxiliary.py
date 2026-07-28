@@ -20,6 +20,8 @@ import sympy as sp
 import numpy as np
 from copy import deepcopy
 
+from utils.models import FUNCTIONS
+
 # Add personal modules:
 if str(Path(__file__).parent.parent) not in sys.path:
     sys.path.append(str(Path(__file__).parent.parent))
@@ -164,7 +166,7 @@ class fancyfitSettings:
         self.y_name = 'Spectra'
         self.fit_mode = 'global'
         self.default_method = 'Powell'
-        self.use_irf = 'gauss'
+        self.use_irf = ''
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
         self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
@@ -195,7 +197,7 @@ class fitFunction:
         for parm in self.parm_names:
             parms.append(sp.symbols(parm))
         expr = sp.sympify(self.expr)
-        self.func = sp.lambdify(parms,expr,'numpy')
+        self.func = sp.lambdify(parms,expr,modules=[FUNCTIONS,'numpy'])
     
     def to_dict(self):
         out_dict={}
@@ -302,12 +304,10 @@ class FitFunctions:
                                       [0,1,1e-6,1],[-1,1,1e-8,1],[1,1,1e-5,1],
                                       ['x0'])
         
-        # exp_decay_conv_gauss = """((A/2)*
-        #                         exp((FWHM/(2*sqrt(2*log(2))))**2/
-        #                         (2*tau**2))*exp(-x/tau)*
-        #                         (1+erf((t-((FWHM/(2*sqrt(2*log(2))))**2/tau))/
-        #                         ((FWHM/(2*sqrt(2*log(2))))*sqrt(2)))))"""
-        # setattr(self,'exp_decay_conv_gauss',Function(exp_decay_conv_gauss,['t0','FWHM','A','tau'],
-        #                               [0,1,0.004,1e7],[-1e5,1e-8,1e-6,1e5],[1e5,1e5,1,1e9],
-        #                               ['t0','FWHM']))
+        edcg = 'edcg(x,x0,A,tau,fwhm)'
+        self.funs['edcg'] = fitFunction('edcg',edcg,['x0','A','tau','fwhm'],
+                                        [0,1,1e3,1e-1],
+                                        [-1,1,1e1,1e-6],
+                                        [1,1,1e6,1],
+                                        ['x0'])
 

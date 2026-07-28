@@ -39,8 +39,6 @@ from utils.auxiliary import data_class,fancyfitSettings
 from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
                           open_path,)
 
-logger = add_logger(__name__)
-import traceback
   
 # =============================================================================
 # =============================================================================
@@ -52,8 +50,8 @@ class LoadDataWindow(QDialog):
     data_loaded = Signal(object)
     
     def __init__(self,settings=None,no_comps=1):
-     try:
         super().__init__()
+        self.logger = add_logger(__name__)
         self.setWindowTitle("Load Data")
         icon_path = Path(Path(__file__).parent,'Load_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
@@ -67,10 +65,7 @@ class LoadDataWindow(QDialog):
             self.set = settings
         
         self.create_ui()
-        
-     except Exception as e:
-         logger.exception('Load Data Window error')
-         QMessageBox.critical(self,'error',f'Fatal Error in {__name__}: {e}')
+
 
     
     def create_ui(self):

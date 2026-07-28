@@ -12,14 +12,17 @@ from PySide6.QtGui import QIcon
 
 # Personal modules
 from utils.logger import setup_logger, add_logger
+from utils.error_handling import excepthook
 from gui.MainWindow import MainWindow   
 
 if __name__=='__main__':
-    QCoreApplication.setOrganizationName("SmoereApps")
-    QCoreApplication.setApplicationName("FancyFit")
     setup_logger()   
     logger = add_logger(__name__)
-    
+    # sys.excepthook = excepthook #TODO: work on global exception handling
+
+    QCoreApplication.setOrganizationName("SmoereApps")
+    QCoreApplication.setApplicationName("FancyFit")
+
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     

@@ -349,6 +349,7 @@ class FunctionsInputPanel(QWidget):
     def tab_count(self):
         return sum(1 for i in range(self.parm_tabs.count())
             if "IRF" not in self.parm_tabs.tabText(i))
+
         
     def set_defaults(self,defaults):
        for fun_name in defaults:
@@ -425,7 +426,11 @@ class FunctionsInputPanel(QWidget):
     def Fit_Funs(self):
         Fit_Funs = [self.parm_tabs.widget(n).values for n in range(self.parm_tabs.count()) if n != self.irf_index]  
         return Fit_Funs
-    
+
+
+    @property
+    def fun_names(self):
+        return [self.parm_tabs.tabText(n) for n in range(self.parm_tabs.count())]
     
     @property
     def common_parms(self):
