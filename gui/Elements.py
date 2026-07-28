@@ -48,7 +48,7 @@ class Checkbox(QCheckBox):
         if root:
             root.addWidget(self,*grid)
         if connect:
-            self.statChanged.connect(connect)
+            self.stateChanged.connect(connect)
 
 class Dropdown(QComboBox):
     def __init__(self,root=None,items=None,layout_args=(),standard=None,command=lambda:None,grid=()):
@@ -63,7 +63,7 @@ class Dropdown(QComboBox):
         root.addWidget(self,*layout_args)
   
 class Spinbox(QSpinBox):
-    def __init__(self,root=None,standard=0,layout_args=(),lower=0,upper=100,grid=(),expand=False):
+    def __init__(self,root=None,standard=0,layout_args=(),lower=0,upper=100,grid=(),expand=False,connect=lambda:None):
         super().__init__()
         if grid and not layout_args:
             layout_args = grid        
@@ -78,6 +78,9 @@ class Spinbox(QSpinBox):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed
             )  
+        if connect:
+           self.valueChanged.connect(connect)
+
 
 class SpinboxDouble(QDoubleSpinBox):
     def __init__(self,root=None,default=0,grid=(),limits=(-1e9,1e9)):

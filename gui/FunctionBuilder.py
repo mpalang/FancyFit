@@ -43,8 +43,6 @@ from utils.auxiliary import FitFunctions, fitFunction
 from utils.plotting import LineCanvas
 from utils.error_handling import error_handler, ErrorBox
 
-logger = add_logger(__name__)
-  
 # =============================================================================
 # =============================================================================
 # =============================================================================
@@ -57,8 +55,8 @@ class FunctionBuilder(QDialog):
     p_upper=[]
         
     def __init__(self):
-     try:
         super().__init__()
+        self.logger = add_logger(__name__)
         self.setWindowTitle("FunctionBuilder")
         icon_path = Path(Path(__file__).parent,'Function_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
@@ -67,10 +65,6 @@ class FunctionBuilder(QDialog):
 
         # self.FitFuns = FitFunctions()
         self.create_ui()
-        
-     except Exception as e:
-         logger.exception()
-         ErrorBox('error',f'Fatal Error in {__name__}: {e}')
 
     
     def create_ui(self):

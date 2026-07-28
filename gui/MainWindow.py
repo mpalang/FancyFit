@@ -42,7 +42,7 @@ from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 
 from utils.fit import GlobalFitWorker
-from utils.error_handling import error_handler,ErrorBox
+from utils.error_handling import error_handler
 
 from gui.panels.main_window_panels import (DataTweakPanel,FitSettingsPanel,
                                         FunctionsInputPanel, PlotPanel,ResultsPanel)
@@ -259,6 +259,9 @@ class MainWindow(QMainWindow):
         if sw.exec():
             self.set = sw.settings
             self.set.save()
+
+        if self.set.use_irf and ('IRF' not in self.fip.fun_names):
+            self.fip.add_irf('gauss')
 
         self.statusBar().showMessage('settings updated')
         

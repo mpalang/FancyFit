@@ -51,7 +51,6 @@ import traceback
 
 class SettingsWindow(QDialog):
     
-    change_flag = Signal(dict)
     change_dict = {'function_panel':False,
                    'needs_replot':False,}
     
@@ -101,7 +100,7 @@ class SettingsWindow(QDialog):
         layout_fit = QGridLayout()
         Label(layout_fit,'Fit Settings',bold=True,layout_args=(0,0))
         Label(layout_fit,'Iterations',layout_args=(1,0))
-        self.input['fit_iterations'] = Spinbox(layout_fit,self.settings.fit_iterations,(1,1),1,10)
+        self.input['fit_iterations'] = Spinbox(layout_fit,self.settings.fit_iterations,(1,1),1,10,connect=self.fit_settings_changed)
         Label(layout_fit,'Default Fit Method',layout_args=(2,0))
         self.input['default_method'] = Inputbox(layout_fit,default=self.settings.default_method,layout_args=(2,1))
         Label(layout_fit,'Use IRF',layout_args=(3,0))
@@ -153,6 +152,8 @@ class SettingsWindow(QDialog):
                 self.settings.__dict__[key] = self.input[key].text()
             elif isinstance(self.input[key], Spinbox):
                 self.settings.__dict__[key] = self.input[key].value()
+            elif isinstance(self.input[key], Checkbox):
+                self.settings.__dict__[key] = self.input[key].isChecked()
         
                 
     def reset_user_defaults(self):
