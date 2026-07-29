@@ -7,6 +7,7 @@ Created on Tue Jul 21 12:15:40 2026
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import (
+    QPushButton,
     QApplication,
     QWidget,
     QMainWindow,
@@ -14,11 +15,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QPlainTextEdit)
 
-# Add personal modules:
-if str(Path(__file__).parent.parent) not in sys.path:
-    sys.path.append(str(Path(__file__).parent.parent))
-from widgets.main_window_widgets import DataTweakPanel
-
+path = str(Path(__file__).parent.parent)
+if path not in sys.path:
+    sys.path.insert(0, path)
+from gui.Elements import ParmRow,Button
 
 class Window(QMainWindow):
     def __init__(self):
@@ -36,23 +36,32 @@ class Window(QMainWindow):
         
         
     def create_widgets(self):
-        self.dtw = DataTweakPanel()
+        self.pr = ParmRow('a',0,-1,1)
+        
+        self.button = QPushButton()
+        self.button.setText('click')
+        
+
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)  # Prevent user editing
         
     def create_layout(self):
-        self.layout.addWidget(self.dtw)
+        self.layout.addWidget(self.pr)
+        self.layout.addWidget(self.button)
         self.layout.addWidget(self.output)
         
     def create_connections(self):
-        self.dtw.cut_requested.connect(self.cut_data)
-        self.dtw.uncut_requested.connect(self.uncut_data)
+        self.button.clicked.connect(self._output)
         
-    def cut_data(self):
-        self.output.setPlainText(f'xlim:{self.dtw.x_limits}\n ylim: {self.dtw.y_limits}')
+    def _output(self):
+        v = self.pr.values
+        self.output.setPlainText(f"""
+                                 name:{v[0]} | {type(v[0])}
+                                 p0:{v[1]} | {type(v[1])}
+                                 lower:{v[2]} | {type(v[2])}
+                                 upper:{v[3]} | {type(v[3])}
+                                 """)
         
-    def uncut_data(self):
-        self.output.setPlainText(f'Reinstating full dataset.')
     
 
         

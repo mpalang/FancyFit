@@ -218,13 +218,16 @@ class FitSettingsPanel(QWidget):
 
 
 # =============================================================================
-#  Parms Panel Widget used in FunctionsInputPanel       
+  
 # =============================================================================
 class ParmsPanel(QWidget):
-    def __init__(self,FitFuns,fun_name=None):
+    """
+    Parms Panel Widget allowing user input for fit functions and their parameters. Used in FunctionsInputPanel 
+    """
+    def __init__(self,FitFuns,fun_name:str|None=None):
         super().__init__()
         self.FitFuns = FitFuns
-        self.fun_name = fun_name
+
         self.layout = QGridLayout()
         
         self.fun_input = Dropdown(self.layout,
@@ -272,25 +275,49 @@ class ParmsPanel(QWidget):
     def on_function_change(self):
         self.Parms.deleteLater()
         self.build_parms_input()
-    
+
+
+    @property
+    def fun_name(self):
+        return self.fun_input.currentText()
     
     @property
-    def values(self):
-        fields = [row.values for row in self.parm_rows]
+    def parm_names(self):
+        return tuple([row.values[0] for row in self.parm_rows])
 
-        parm_names = [d[0] for d in fields]
-        p0 = np.array([d[1] for d in fields])
-        p_lower = np.array([d[2] for d in fields])#array definitio makes it easier to set fixed values.
-        p_upper = np.array([d[3] for d in fields])
-        fixed = np.array([d[4] for d in fields])
-        p_lower[fixed] = p0[fixed]
-        p_upper[fixed] = p0[fixed]
+    @property
+    def parms(self):
+        "dict with parm_names as keys and p0 as values"
+        return {row.values[0]:row.values[1] for row in self.parm_rows}
 
-        func = self.FitFuns.funs[self.fun_input.currentText()].copy(
-                            parm_names,
-                            list(p0),list(p_lower),list(p_upper))
-            
-        return func
+    @property
+    def p0(self):
+        "tuple with p0 as values"
+        return tuple([row.values[0] for row in self.parm_rows])
+
+    @property
+    def p_lower(self):
+        "tuple with lower bound as values"
+        return tuple([row.values[2] for row in self.parm_rows]) 
+
+    @property
+    def p_upper(self):
+        "tuple with upper bound as values"
+        return tuple([row.values[3] for row in self.parm_rows]) 
+    
+    @property
+    def bounds(self):
+        "dict with parm_names as keys and bounds as values"
+        out = {}
+        for row in self.parm_rows:
+                out[row.values[0]] = (row.values[2],row.values[3])
+        return out
+
+    @property
+    def funObj(self):
+        out = self.FitFuns.funs[self.fun_name].copy(
+            self.parm_names,self.p0,self.p_lower, self.p_upper)
+        return out
     
     
 # =============================================================================
@@ -369,7 +396,7 @@ class FunctionsInputPanel(QWidget):
            tab = ParmsPanel(self.FitFuns,fun_name=fun_name)
            self.parm_tabs.insertTab(self.tab_count,tab,tab_name)
            self.relabel_tabs()
-           # self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
+           self.update_common_parms(self.FitFuns.funs[fun_name].common_parms)
 
 
     def relabel_tabs(self):
@@ -378,7 +405,7 @@ class FunctionsInputPanel(QWidget):
                self.parm_tabs.setTabText(i, f"fun{i+1}")
                
                
-    def update_common_parms(self,new_common_parms=['']):
+    def update_common_parms(self,new_common_parms=[]):
        common_parms = self.common_parms_input.text().split(',')
        for new_common_parm in new_common_parms:
            if new_common_parm not in common_parms:
@@ -404,7 +431,6 @@ class FunctionsInputPanel(QWidget):
     def no_comps(self):
         return self.parm_tabs.count()
     
-    
     @property
     def irf_index(self):
         irf_index = [n for n in range(self.parm_tabs.count()) if self.parm_tabs.tabText(n)=='IRF']
@@ -413,29 +439,49 @@ class FunctionsInputPanel(QWidget):
         else:
             None
 
-    
     @property
     def IRF(self):
         if self.irf_index:
             return self.parm_tabs.widget(self.irf_index).values
         else:
             return None
-       
-        
-    @property
-    def Fit_Funs(self):
-        Fit_Funs = [self.parm_tabs.widget(n).values for n in range(self.parm_tabs.count()) if n != self.irf_index]  
-        return Fit_Funs
-
 
     @property
     def fun_names(self):
-        return [self.parm_tabs.tabText(n) for n in range(self.parm_tabs.count())]
+        return tuple([self.parm_tabs.tabText(n) for n in range(self.parm_tabs.count())])
+          
+    @property
+    def funObjs(self):
+        out = {}
+        for n in range(self.no_comps):
+            out[self.parm_tabs.tabText(n)] = self.parm_tabs.widget(n).funObj
+        return out
+
+    @property
+    def funs(self):
+        out = {}
+        ff = self.funObjs
+        for name in ff:
+            out[name] = ff[name].func
+        return out
     
     @property
     def common_parms(self):
-        return self.common_parms_input.text().replace(' ','').split(',')
-    
+        return tuple(self.common_parms_input.text().replace(' ','').split(','))
+
+    @property
+    def parms(self):
+        out = {}
+        for n in range(self.no_comps):
+            out[self.parm_tabs.tabText(n)] = self.parm_tabs.widget(n).parms
+        return out
+
+    @property
+    def bounds(self):
+        out = {}
+        for n in range(self.no_comps):
+            out[self.parm_tabs.tabText(n)] = self.parm_tabs.widget(n).bounds
+        return out
     
 # =============================================================================
 # Plot Panel
