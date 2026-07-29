@@ -226,8 +226,18 @@ def open_path(root,default_path = ''):
 # Parm Row Widget used in ParmsPanel and FunctionBuilder       
 # =============================================================================
 class ParmRow(QWidget):
+    
+    changed = Signal()
+    _STYLE = """
+        ParmRow[invalid="true"] {
+                background-color: #ffe6e6;
+                color: black;
+                    }
+        """
+    
     def __init__(self,name,p0,p_lower,p_upper):
         super().__init__()
+                
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
                            QSizePolicy.Policy.Expanding)
         layout = QHBoxLayout(self)
@@ -243,38 +253,61 @@ class ParmRow(QWidget):
                                             background-color: lightgreen;
                                         }
                                     """)
-                 
+                                    
+        self.create_connections()
+                   
+
+    def create_connections(self):
+        self.name_input.textChanged.connect(self.validate)
         self.p0_input.textChanged.connect(self.validate)
         self.p_lower_input.textChanged.connect(self.validate)
         self.p_upper_input.textChanged.connect(self.validate)
         
+        
+    def _set_invalid(self, invalid: bool):
+        if self.property("invalid") == invalid:
+            return                                       # no change, skip the repolish
+        self.setProperty("invalid", invalid)
+        self.style().unpolish(self)
+        self.style().polish(self)
+               
+    
+    def get_values(self):
+        def get_bound(widget, default):
+            text = widget.text().strip()
+            return float(text) if text else default
+        
+        name = self.name_input.text()
+        p0 = float(self.p0_input.text())
+
+        if self.fix_button.isChecked():
+            p_lower = p0
+            p_upper = p0
+        else:
+            p_lower = get_bound(self.p_lower_input,-np.inf)
+            p_upper = get_bound(self.p_upper_input,np.inf)
+
+        return name, p0, p_lower, p_upper
+        
+        
     def validate(self):
         try:
-            ok = (
-                float(self.p_lower_input.text())
-                <= float(self.p0_input.text())
-                <= float(self.p_upper_input.text())
-                )
-            if ok:
-               self.setStyleSheet("")
-               return True
+            name, p0, p_lower, p_upper = self.get_values()
+            if p_lower <= p0 <= p_upper:
+                self.setStyleSheet("")
+                return True
             else:
-                self.setStyleSheet("background:#ffcccc;")
+                self.setStyleSheet('background-color: #ffe6e6;color: black;')
                 return False
-        except:
-            pass #We don't need to do anything here yet...otherwise too many errors are raised.
-        
+        except Exception:
+            self.setStyleSheet('background-color: #ffe6e6;color: black;')
+            return False
 
     @property
     def values(self):
         if self.validate():
-            name = self.name_input.text()
-            p0 = float(self.p0_input.text())
-            p_lower = float(self.p_lower_input.text())
-            p_upper = float(self.p_upper_input.text())
-            fixed = self.fix_button.isChecked()
-            
-            return name,p0,p_lower,p_upper,fixed
+            return self.get_values()
         else:
             ErrorBox('Check Parameters','Please make sure parameter inputs are valid.')
+            raise ValueError('Please make sure parameter inputs are valid.')
         

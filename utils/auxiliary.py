@@ -12,9 +12,10 @@ QCoreApplication.setApplicationName("FancyFit")
 
 from PySide6.QtCore import QStandardPaths
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import sys
+from collections.abc import Callable
 
 import sympy as sp
 import numpy as np
@@ -191,6 +192,7 @@ class fitFunction:
     p_lower: list[float]
     p_upper: list[float]
     common_parms: list[str]
+    func: Callable = field(init=False, repr=False)
     
     def __post_init__(self):
         parms = ['x']
@@ -198,23 +200,13 @@ class fitFunction:
             parms.append(sp.symbols(parm))
         expr = sp.sympify(self.expr)
         self.func = sp.lambdify(parms,expr,modules=[FUNCTIONS,'numpy'])
-    
+
     def to_dict(self):
-        out_dict={}
-        for key,value in self.__dict__.items():
-            if key not in ['func']:
-                out_dict[key]=value
-        return out_dict
+        return {k: v for k, v in asdict(self).items() if k != 'func'}
     
     def copy(self,parm_names,p0,p_lower,p_upper):
-        """creates a copy of this fitFunction Object with different parameter settings"""
-        copy_func = deepcopy(self)
-        copy_func.parm_names=parm_names
-        copy_func.p0=p0
-        copy_func.p_lower=p_lower
-        copy_func.p_upper=p_upper
-        
-        return copy_func
+        """creates a copy of this fitFunction Object with different parameter settings"""        
+        return fitFunction(self.name,self.expr,parm_names,p0,p_lower,p_upper,self.common_parms)
  
 
 def conv(y, yc):
@@ -304,8 +296,8 @@ class FitFunctions:
                                       [0,1,1e-6,1],[-1,1,1e-8,1],[1,1,1e-5,1],
                                       ['x0'])
         
-        edcg = 'edcg(x,x0,A,tau,fwhm)'
-        self.funs['edcg'] = fitFunction('edcg',edcg,['x0','A','tau','fwhm'],
+        edcg = 'edcg(x,x0,fwhm,A,tau)'
+        self.funs['edcg'] = fitFunction('edcg',edcg,['x0','fwhm','A','tau'],
                                         [0,1,1e3,1e-1],
                                         [-1,1,1e1,1e-6],
                                         [1,1,1e6,1],

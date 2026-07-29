@@ -41,8 +41,8 @@ from gui import __version__
 from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 
-from utils.fit import GlobalFitWorker
-from utils.error_handling import error_handler
+from fit.workers import GlobalFitWorker
+from utils.error_handling import error_handler, ErrorBox
 
 from gui.panels.main_window_panels import (DataTweakPanel,FitSettingsPanel,
                                         FunctionsInputPanel, PlotPanel,ResultsPanel)
@@ -287,61 +287,40 @@ class MainWindow(QMainWindow):
     # Fit Functions and Classes:
     # =============================================================================
     @error_handler   
-    def prepare_fit(self):
-        # Prepare data and settings for global fit
-        data = self.data
-        Fun_Objs = self.fip.Fit_Funs
-        irf_index = self.fip.irf_index
-        IRF = self.fip.IRF
-
-        funs = [fun_obj.func for fun_obj in Fun_Objs]
-        parms =[fun_obj.parm_names for fun_obj in Fun_Objs]
-        p0 = [fun_obj.p0 for fun_obj in Fun_Objs]
-        pl = [fun_obj.p_lower for fun_obj in Fun_Objs]
-        pu = [fun_obj.p_upper for fun_obj in Fun_Objs]
-        cp = self.fip.common_parms
-
+    def prepare_fit_settings(self):
         # Prepare settings for global fit
+
         settings={
-                'funs': funs,
-                'parms': parms,
-                'p0': p0,
-                'p_lower': pl,
-                'p_upper': pu,
-                'common_parms': cp,
                 'method': self.fsp.method,
                 'iterations': self.set.fit_iterations,
-        }
-        if IRF:
-            settings['irf'] = IRF.func
-            settings['irf_parms'] = IRF.parm_names
-            settings['irf_p0'] = IRF.p0
-            settings['irf_p_lower'] = IRF.p_lower
-            settings['irf_p_upper'] = IRF.p_upper
+                'common_parms': self.fip.common_parms,
+            }
         
-        return data.x, data.y, data.z.T, settings
+        return settings
     
     
     @error_handler
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
             
-            x,y,z,settings = self.prepare_fit()
+            settings = self.prepare_fit_settings()
 
             self.thread = QThread()
-            self.worker = GlobalFitWorker(
-                x,y,z,settings=settings)
+            self.worker = GlobalFitWorker(self.data, 
+                                          self.fip.funs,
+                                          self.fip.parms, 
+                                          self.fip.bounds,
+                                          settings=settings)
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
             self.worker.progress.connect(
                 self.update_fit_progress
             )
-            self.worker.finished.connect(
-                self.fit_finished
-            )
+            self.worker.result.connect(self.received_result)
+            self.worker.error.connect(self.received_fit_error)
+            self.worker.finished.connect(self.fit_finished)
             
             self.thread.start()
-            
             
     @error_handler
     def update_fit_progress(self,progress):
@@ -352,16 +331,46 @@ class MainWindow(QMainWindow):
             #progress is in type of fitpgrogress class with attributes chi2, parameters, iteration, total_iterations
             report = f'Iter.{progress.iteration+1}/{progress.total_iterations} with chi2={progress.chi2:.3g}'
             self.statusBar().showMessage(f'Executing Global Fit: {report}')
+
+    def received_fit_error(self,Error):
+        ErrorBox('Fit Error',f'{type(Error).__name__}: {Error[0]}',details=Error[1],parent=self)
+
+
+    def received_result(self,result):
+        # Unpack results. gf is added in self.fit_finished after thread is done.
+        self.gf = result
+        self.data.x_fit = self.gf.x
+        self.data.y_fit = self.gf.y
+        self.data.z_fit = self.gf.Z_fit.T
+        self.data.DADS = self.gf.DADS.T
+        self.data.residuum = self.gf.residuum.T
+        
+        # Make Plots
+        self.make_plots()
+
+        # Print Results in Prompt Box
+        self.update_results()
+
+        self.status_label2.setText('global fit')
+
     
+    def fit_finished(self):
+
+        self.thread.quit()
+        self.thread.wait()
+
+        self.statusBar().showMessage('Fit finished',5000)
+        self.statusBar().showMessage('Ready...',0)
     
+        
     @error_handler
     def update_results(self):
-            p_dict = self.gf.p_dict
-            errors = np.array(self.gf.m.errors)/np.array(self.gf.scaling_factors)
+            p_dict = self.gf.fit_parms
+            # errors = np.array(self.gf.m.errors)
             m = self.gf.m
             
-            fun_names = [self.fip.parm_tabs.widget(n).fun_input.currentText() for n in range(self.fip.parm_tabs.count())]
-            funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names)])
+            fun_names = self.fip.fun_names
+            funs_text = '; '.join([f'fun{n+1}: '+i for n,i in enumerate(fun_names) if i.lower()!='irf'])
             params_text = "\n".join(
                 f"{parm:<8s} = {p_dict[parm]:>12.2g}"#± {errors[parm]*scf[parm]:>12.2g } #TODO include errors in the report
                 for parm in p_dict.keys())
@@ -384,29 +393,6 @@ class MainWindow(QMainWindow):
                 )
             
             self.rsp.appendText(report)
-    
-    
-    @error_handler
-    def fit_finished(self,result):
-        self.gf = result
-        self.thread.quit()
-        self.thread.wait()
-    
-        # Unpack results. gf is added in self.fit_finished after thread is done.
-        self.data.x_fit = self.gf.x
-        self.data.y_fit = self.gf.y
-        self.data.z_fit = self.gf.Z_fit.T
-        self.data.DADS = self.gf.DADS.T
-        self.data.residuum = self.gf.residuum.T
-        
-        # Make Plots
-        self.make_plots()
-
-        # Print Results in Prompt Box
-        self.update_results()
-        self.statusBar().showMessage('Fit finished',5000)
-        self.status_label2.setText('global fit')
-        self.statusBar().showMessage('Ready...',0)
     
     
 # ---------------------------

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import erfc, erfcx
 
-def exp_decay_conv_gauss(x, x0, A, tau, fwhm):
+def exp_decay_conv_gauss(x, x0, fwhm, A, tau):
     """
     Analytical convolution of  A*exp(-(x-x0)/tau)*H(x-x0)  with a unit-area
     Gaussian IRF of full width at half maximum `fwhm`.
@@ -11,7 +11,7 @@ def exp_decay_conv_gauss(x, x0, A, tau, fwhm):
     """
     z = np.asarray(x, dtype=float) - x0
     if tau <= 0 or fwhm <= 0:
-        raise ValueError("tau and fwhm must be > 0")
+        raise ValueError(f"tau and fwhm must be > 0, got tau={tau}, fwhm={fwhm}")
 
     s = fwhm / 2.354820045
     u = (s/tau - z/s) / np.sqrt(2)

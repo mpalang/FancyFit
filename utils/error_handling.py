@@ -18,6 +18,7 @@ class ErrorBox(QMessageBox):
         super().__init__(parent)
         self.setIcon(QMessageBox.Icon.Critical)
         self.setWindowTitle(title)
+        self.layout().setColumnMinimumWidth(1, 600)
         self.setText(message)
         if InformativeText:
             self.setInformativeText('informativeText')
