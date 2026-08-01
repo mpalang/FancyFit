@@ -7,6 +7,7 @@ Created on Tue Jul 21 12:05:55 2026
 This contains all widgets used in the Main Window.
 """
 import numpy as np
+from types import MappingProxyType
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -488,25 +489,27 @@ class FunctionsInputPanel(QWidget):
 # =============================================================================
 class LinesWidget(QWidget):
     
-    data = dict()
-    
-    kwargs_raw ={'linestyle': 'None',
+    KWARGS_RAW = MappingProxyType({
+                'linestyle': 'None',
                 'marker': 'o',
                 'markerfacecolor': 'None',
                 'markeredgecolor': 'k',
                 'markeredgewidth': 0.5,
-                'markersize': 6}
-    kwargs_raw_inner ={'linestyle': 'None',
+                'markersize': 6
+                })
+    KWARGS_RAW_INNER = MappingProxyType({
+                'linestyle': 'None',
                 'marker': 'o',
                 'markerfacecolor': 'k',
                 'markeredgecolor': 'k',
                 'markeredgewidth': 0.1,
-                'markersize': 0.8}
+                'markersize': 0.8
+                })
+
     
-    
-    def __init__(self, figsize = (18,9), plot_style='linear'):
-        super().__init__()
-        
+    def __init__(self, figsize = (18,9), plot_style='linear',parent=None):
+        super().__init__(parent)
+
         self.create_ui(figsize=figsize,plot_style=plot_style)
         self.create_connections()
     
@@ -514,6 +517,7 @@ class LinesWidget(QWidget):
     def create_ui(self,figsize=(18,9), plot_style='linear'):
         layout = QVBoxLayout()
 
+        # Create Elements:
         self.kin = LineCanvas(figsize=figsize,plot_style=plot_style)
         self.y_slider = Slider()
         self.rescale_kin = Button(text='rescale')
@@ -523,25 +527,27 @@ class LinesWidget(QWidget):
         self.rescale_spec = Button(text='rescale')
         self.auto_scale_spec = Button(text='auto scale')
         
+        # Element Settings:
         self.auto_scale_kin.setCheckable(True)
         self.auto_scale_spec.setCheckable(True)
-        
         self.auto_scale_kin.setStyleSheet(':checked {background-color: rgb(80,180,80);}')
         self.auto_scale_spec.setStyleSheet(':checked {background-color: rgb(80,180,80);}')       
         
+        # Layout:
         layout.addWidget(self.kin)
         x_foot_layout = QHBoxLayout()
         x_foot_layout.addWidget(self.y_slider)
         x_foot_layout.addWidget(self.rescale_kin)
         x_foot_layout.addWidget(self.auto_scale_kin)
+
         layout.addLayout(x_foot_layout)
         layout.addWidget(self.spec)
         y_foot_layout = QHBoxLayout()
         y_foot_layout.addWidget(self.x_slider)
         y_foot_layout.addWidget(self.rescale_spec)
         y_foot_layout.addWidget(self.auto_scale_spec)
+
         layout.addLayout(y_foot_layout)
-        
         self.setLayout(layout)
         
     
@@ -551,8 +557,7 @@ class LinesWidget(QWidget):
         
         self.rescale_kin.clicked.connect(self.kin.rescale)
         self.rescale_spec.clicked.connect(self.spec.rescale)
-    
-        
+
     def set_slider_limits(self, x_limits, y_limits):
         self.x_slider.set_limits(x_limits)
         self.y_slider.set_limits(y_limits)
@@ -581,13 +586,13 @@ class LinesWidget(QWidget):
         iy0 = np.argmax(y>=self.y_slider.value)
         ix0 = np.argmax(x>=self.x_slider.value)
 
-        self.kin.set_line('raw',x,Z[:,iy0],**self.kwargs_raw)
-        self.kin.set_line('raw_inner',x,Z[:,iy0],**self.kwargs_raw_inner)
+        self.kin.set_line('raw',x,Z[:,iy0],**self.KWARGS_RAW)
+        self.kin.set_line('raw_inner',x,Z[:,iy0],**self.KWARGS_RAW_INNER)
         self.kin.set_line('fit',x_fit,Z_fit[:,iy0],color='red')           
         self.kin.draw_idle()
         
-        self.spec.set_line('raw',y,Z[ix0,:],**self.kwargs_raw)
-        self.spec.set_line('raw_inner',y,Z[ix0,:],**self.kwargs_raw_inner)
+        self.spec.set_line('raw',y,Z[ix0,:],**self.KWARGS_RAW)
+        self.spec.set_line('raw_inner',y,Z[ix0,:],**self.KWARGS_RAW_INNER)
         self.spec.set_line('fit',y_fit,Z_fit[ix0,:],color='red')           
         self.spec.draw_idle()
        
@@ -604,8 +609,8 @@ class LinesWidget(QWidget):
     def refresh_kin_plot(self):
         iy0 = np.argmax(self.data.y>=self.y_slider.value)
 
-        self.kin.set_line('raw',self.data.x,self.data.z[:,iy0],**self.kwargs_raw)
-        self.kin.set_line('raw_inner',self.data.x,self.data.z[:,iy0],**self.kwargs_raw_inner)
+        self.kin.set_line('raw',self.data.x,self.data.z[:,iy0],**self.KWARGS_RAW)
+        self.kin.set_line('raw_inner',self.data.x,self.data.z[:,iy0],**self.KWARGS_RAW_INNER)
         self.kin.set_line('fit',self.data.x_fit,self.data.z_fit[:,iy0],color='red')           
         self.kin.draw_idle()
        
@@ -616,8 +621,8 @@ class LinesWidget(QWidget):
     def refresh_spec_plot(self):
         ix0 = np.argmax(self.data.x>=self.x_slider.value)
         
-        self.spec.set_line('raw',self.data.y,self.data.z[ix0,:],**self.kwargs_raw)
-        self.spec.set_line('raw_inner',self.data.y,self.data.z[ix0,:],**self.kwargs_raw_inner)
+        self.spec.set_line('raw',self.data.y,self.data.z[ix0,:],**self.KWARGS_RAW)
+        self.spec.set_line('raw_inner',self.data.y,self.data.z[ix0,:],**self.KWARGS_RAW_INNER)
         self.spec.set_line('fit',self.data.y_fit,self.data.z_fit[ix0,:],color='red')           
         self.spec.draw_idle()
            
@@ -645,7 +650,7 @@ class ContoursWidget(QWidget):
         layout.setRowStretch(0, 1)
         layout.setRowStretch(1, 1)
         layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(1, 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
         
         self.setLayout(layout)
         

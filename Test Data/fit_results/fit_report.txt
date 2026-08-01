@@ -1,0 +1,18 @@
+Ready for the first fit! The better the boundaries and initial guesses, the better the fit results might be!
+====================
+|| FIT RESULTS 14:45 ||
+====================
+
+fun1: fun1; fun2: fun2
+Parameters:
+x0       =         -5.8
+fun1_A   =            1
+fun1_tau =      1.5e+03
+fun2_A   =            1
+fun2_tau =           14
+
+=== FMIN INFO ===
+FCN (min value): 1.9839e-05
+EDM: nan
+Valid minimum: False
+Converged: False

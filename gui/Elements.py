@@ -9,6 +9,7 @@ Created on Wed Jun 17 11:36:40 2026
 from PySide6 import QtWidgets
 import numpy as np
 from pathlib import Path
+from collections.abc import Callable
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -94,13 +95,17 @@ class SpinboxDouble(QDoubleSpinBox):
             root.addWidget(self,*grid)
 
 class Button(QPushButton):
-    def __init__(self,root=None,text='',layout_args=(),connect = lambda:None,grid=(),expand=False):
+    def __init__(self,root=None,text='',layout_args=(),connect: Callable|None=None,grid=(),expand=False):
         super().__init__(text)
-        if grid and not layout_args:
-            layout_args = grid    
+        if layout_args and not grid:
+            grid = layout_args    
         if root:
-            root.addWidget(self,*layout_args)
-        self.clicked.connect(connect)
+            if grid:
+                root.addWidget(self,*grid)
+            else:
+                root.addWidget(self)
+        if connect:
+            self.clicked.connect(connect)
         if expand:
             self.setSizePolicy(
             QSizePolicy.Policy.Expanding,
