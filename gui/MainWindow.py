@@ -275,12 +275,43 @@ class MainWindow(QMainWindow):
           
     
     def save_results(self):
-        self.statusBar().showMessage('saving results')
-        folder = Path(self.set.z_data_path).parent
-        filename = Path(self.set.z_data_path).stem+'_fit_results.txt'
-        filepath = folder/filename
-        with open(filepath,'w') as f:
-            f.write(self.results_box.toPlainText())
+        from gui.SaveWindow import SaveWindow
+        sw = SaveWindow()
+        save_folder = Path(self.set.z_data_path).parent/'fit_results'
+        if not save_folder.exists():
+            save_folder.mkdir(parents=True, exist_ok=True)
+        if sw.exec():
+            self.statusBar().showMessage('saving results')
+            if sw.data['cut']:
+                np.savetxt(save_folder/'x_cut.txt',self.data.x)
+                np.savetxt(save_folder/'y_cut.txt',self.data.y)
+                np.savetxt(save_folder/'z_cut.txt',self.data.z)
+            if sw.data['fit']:
+                np.savetxt(save_folder/'x_fit.txt',self.data.x_fit)
+                np.savetxt(save_folder/'y_fit.txt',self.data.y_fit)
+                np.savetxt(save_folder/'z_fit.txt',self.data.z_fit)
+            if sw.data['DADS']:
+                np.savetxt(save_folder/'DADS.txt',self.data.DADS)
+            if sw.data['D']:
+                np.savetxt(save_folder/'D.txt',self.data.D)
+            if sw.data['residuum']:
+                np.savetxt(save_folder/'residuum.txt',self.data.residuum)
+            if sw.data['fit_report']:
+                with open(save_folder/'fit_report.txt','w') as f:
+                    f.write(self.rsp.results_box.toPlainText())
+            if sw.plots['spec']:    
+                self.plp.lines.spec.fig.savefig(save_folder/'spec_plot.png',dpi=300) 
+            if sw.plots['kin']:    
+                self.plp.lines.kin.fig.savefig(save_folder/'kin_plot.png',dpi=300) 
+            if sw.plots['raw_contour']:    
+                self.plp.contours.Z.fig.savefig(save_folder/'raw_contour_plot.png',dpi=300) 
+            if sw.plots['fit_contour']:    
+                self.plp.contours.Z_fit.fig.savefig(save_folder/'fit_contour_plot.png',dpi=300) 
+            if sw.plots['residuum']:    
+                self.plp.contours.residuum.fig.savefig(save_folder/'residuum_plot.png',dpi=300) 
+            if sw.plots['DADS']:    
+                self.plp.contours.DADS.fig.savefig(save_folder/'DADS_plot.png',dpi=300) 
+
         
     
     # =============================================================================
@@ -343,6 +374,7 @@ class MainWindow(QMainWindow):
         self.data.y_fit = self.gf.y
         self.data.z_fit = self.gf.Z_fit.T
         self.data.DADS = self.gf.DADS.T
+        self.data.D = self.gf.D.T
         self.data.residuum = self.gf.residuum.T
         
         # Make Plots
