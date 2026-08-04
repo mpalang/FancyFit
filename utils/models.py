@@ -1,6 +1,12 @@
 import numpy as np
 from scipy.special import erfc, erfcx
 
+def exp_decay(x, x0, A, tau):
+    """Exponential decay starting at x0, zero before it."""
+    x = np.asarray(x, float)
+    z = -(x - x0) / tau
+    return A * np.where(x >= x0, np.exp(np.minimum(z, 0.0)), 0.0)
+
 def exp_decay_conv_gauss(x, x0, fwhm, A, tau):
     """
     Analytical convolution of  A*exp(-(x-x0)/tau)*H(x-x0)  with a unit-area
@@ -10,8 +16,8 @@ def exp_decay_conv_gauss(x, x0, fwhm, A, tau):
     un-convolved decay would have at x0.
     """
     z = np.asarray(x, dtype=float) - x0
-    if tau <= 0 or fwhm <= 0:
-        raise ValueError(f"tau and fwhm must be > 0, got tau={tau}, fwhm={fwhm}")
+    # if tau <= 0 or fwhm <= 0:
+    #     raise ValueError(f"tau and fwhm must be > 0, got tau={tau}, fwhm={fwhm}")
 
     s = fwhm / 2.354820045
     u = (s/tau - z/s) / np.sqrt(2)
@@ -25,7 +31,10 @@ def exp_decay_conv_gauss(x, x0, fwhm, A, tau):
     return (A/2) * out
 
 
+
 FUNCTIONS={
+    'ed': exp_decay,
+    'exp_decay': exp_decay,
     'exp_decay_conv_gauss': exp_decay_conv_gauss,
     'edcg': exp_decay_conv_gauss,
 }

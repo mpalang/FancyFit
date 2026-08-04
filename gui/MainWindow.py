@@ -355,13 +355,13 @@ class MainWindow(QMainWindow):
             
     @error_handler
     def update_fit_progress(self,progress):
-        if isinstance(progress,str):
+        # if isinstance(progress,str):
             self.statusBar().showMessage(f'Executing Global Fit: {progress}')
             
-        elif type(progress).__name__=='FitProgress':
-            #progress is in type of fitpgrogress class with attributes chi2, parameters, iteration, total_iterations
-            report = f'Iter.{progress.iteration+1}/{progress.total_iterations} with chi2={progress.chi2:.3g}'
-            self.statusBar().showMessage(f'Executing Global Fit: {report}')
+        # elif type(progress).__name__=='FitProgress': # deprecated, but kept until sure everyting works
+        #     #progress is in type of fitpgrogress class with attributes chi2, parameters, iteration, total_iterations
+        #     report = f'Iter.{progress.iteration+1}/{progress.total_iterations} with chi2={progress.chi2:.3g}'
+        #     self.statusBar().showMessage(f'Executing Global Fit: {report}')
 
     def received_fit_error(self,Error):
         ErrorBox('Fit Error',f'{type(Error).__name__}: {Error[0]}',details=Error[1],parent=self)
@@ -370,6 +370,12 @@ class MainWindow(QMainWindow):
     def received_result(self,result):
         # Unpack results. gf is added in self.fit_finished after thread is done.
         self.gf = result
+        if self.gf.error_log:
+            message = f"{len(self.gf.error_log)/self.gf.nfcn:.2%} ({len(self.gf.error_log)}/{self.gf.nfcn}) bad evaluations during fit."
+            details = f"{';\n'.join(self.gf.error_log[0:5])}\n ... (and {len(self.gf.error_log)-5} more)" if len(self.gf.error_log)>5 else f"{';\n'.join(self.gf.error_log)}"
+            self.logger.warning(message + f"|| Details: {details}")
+            ErrorBox('Fit Warning',message+' Consider changing boundaries or check function.',details=details,parent=self)
+
         self.data.x_fit = self.gf.x
         self.data.y_fit = self.gf.y
         self.data.z_fit = self.gf.Z_fit.T

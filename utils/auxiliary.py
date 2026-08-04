@@ -193,6 +193,7 @@ class fitFunction:
     p_upper: list[float]
     common_parms: list[str]
     func: Callable = field(init=False, repr=False)
+    labels: list[str] | None = None
     
     def __post_init__(self):
         parms = ['x']
@@ -201,12 +202,17 @@ class fitFunction:
         expr = sp.sympify(self.expr)
         self.func = sp.lambdify(parms,expr,modules=[FUNCTIONS,'numpy'])
 
+        if self.labels:
+            self.labels = list(self.labels)
+        else:
+            self.labels = list(self.parm_names)
+
     def to_dict(self):
         return {k: v for k, v in asdict(self).items() if k != 'func'}
     
-    def copy(self,parm_names,p0,p_lower,p_upper):
+    def copy(self,p0,p_lower,p_upper,labels:list[str]|None=None):
         """creates a copy of this fitFunction Object with different parameter settings"""        
-        return fitFunction(self.name,self.expr,parm_names,p0,p_lower,p_upper,self.common_parms)
+        return fitFunction(self.name,self.expr,self.parm_names,p0,p_lower,p_upper,self.common_parms,labels=labels)
  
 
 def conv(y, yc):
@@ -283,11 +289,12 @@ class FitFunctions:
                                       [0,1,1],[-1,0,0],[1,10,10],
                                       ['x0'])
 
-        exp_decay = "A*exp(-(x-x0)/tau)*heaviside(x-x0,0)"
+        # exp_decay = "A*exp(-(x-x0)/tau)*heaviside(x-x0,0)"
+        exp_decay = "ed(x,x0,A,tau)"
         self.funs['exp_decay'] = fitFunction('exp_decay',exp_decay,
                                              ['x0','A','tau'],
                                              [0,1,1e3],
-                                             [-1,1,-np.inf],
+                                             [-1,1,1e-8],
                                              [1,1,np.inf],
                                              ['x0'])
         
@@ -298,8 +305,8 @@ class FitFunctions:
         
         edcg = 'edcg(x,x0,fwhm,A,tau)'
         self.funs['edcg'] = fitFunction('edcg',edcg,['x0','fwhm','A','tau'],
-                                        [0,1,1e3,1e-1],
-                                        [-1,1,1e1,1e-6],
-                                        [1,1,1e6,1],
-                                        ['x0'])
+                                        [0,1e-1,1,1e3],
+                                        [-1,1e-6,1,1e-8],
+                                        [1,1,1,1e6],
+                                        ['x0','fwhm'])
 

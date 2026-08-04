@@ -1,21 +1,11 @@
 @echo off
-setlocal
 
-set APPNAME=FancyFit
-set ENTRY=main.py
-set ENVNAME=fancyfit
-
-call conda activate %ENVNAME%
-if errorlevel 1 (
-    echo Could not activate %ENVNAME%
-    pause
-    exit /b 1
-)
+call conda activate fancyfit
 
 rmdir /s /q build dist 2>nul
 
 pyinstaller ^
-  --name %APPNAME% ^
+  --name FancyFit ^
   --windowed ^
   --clean ^
   --noconfirm ^
@@ -24,12 +14,10 @@ pyinstaller ^
   --specpath build ^
   --icon="%~dp0icon.ico" ^
   --hidden-import scipy._external.array_api_compat.numpy.fft main.py ^
-  %ENTRY%
+  main.py
 
 if errorlevel 1 (
     echo BUILD FAILED
     pause
     exit /b 1
 )
-
-endlocal

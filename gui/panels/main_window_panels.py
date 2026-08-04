@@ -317,7 +317,7 @@ class ParmsPanel(QWidget):
     @property
     def funObj(self):
         out = self.FitFuns.funs[self.fun_name].copy(
-            self.parm_names,self.p0,self.p_lower, self.p_upper)
+            self.p0,self.p_lower, self.p_upper,labels=self.parm_names)
         return out
     
     
