@@ -4,7 +4,7 @@
 
 contact: moritzpalang@gmail.com
 
-*Version 0.2.0-beta*
+*Version 0.3.0-beta*
 
 This is a beta version and still needs some work. Not all functions are (fully) functional.
 
