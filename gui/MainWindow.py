@@ -55,9 +55,7 @@ from gui.panels.main_window_panels import (DataTweakPanel,FitSettingsPanel,
         
 class MainWindow(QMainWindow):
     """This is the main Window for FancyFit."""
-    
-    use_test_data = True
-    
+        
     @error_handler
     def __init__(self):
         super().__init__()
@@ -205,6 +203,8 @@ class MainWindow(QMainWindow):
     def load_settings(self):
         self.set = fancyfitSettings()
         plt.rcParams.update({'font.size':12})  
+
+        self.use_test_data = self.set.use_testdata
 
         self.FitFuns = FitFunctions()#Replace old FitFuns with new sympy method
 

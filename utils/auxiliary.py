@@ -170,9 +170,9 @@ class fancyfitSettings:
         self.use_irf = ''
         self.default_funs = ['exp_decay','exp_decay']
         self.use_testdata = False
-        self.z_data_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
-        self.y_data_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))
-        self.x_data_path = str(Path(Path(__file__).parent.parent,'Test Data','t.txt'))
+        self.z_data_path = str(Path(Path(__file__).parent.parent,'Data','signal.txt'))
+        self.y_data_path = str(Path(Path(__file__).parent.parent,'Data','wl.txt'))
+        self.x_data_path = str(Path(Path(__file__).parent.parent,'Data','t.txt'))
         
         self.z_testdata_path = str(Path(Path(__file__).parent.parent,'Test Data','signal.txt'))
         self.y_testdata_path = str(Path(Path(__file__).parent.parent,'Test Data','wl.txt'))
