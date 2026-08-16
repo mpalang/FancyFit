@@ -42,3 +42,5 @@ jobs:
     - name: Test with pytest
       run: pytest
 
+#Fix import error of fittoolkit. Make public?
+
