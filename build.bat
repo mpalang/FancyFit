@@ -12,7 +12,7 @@ pyinstaller ^
   --distpath "%~dp0..\FancyFit_Release" ^
   --workpath build ^
   --specpath build ^
-  --icon="%~dp0icon.ico" ^
+  --icon="%~dp0gui\MainIcon.ico" ^
   --hidden-import scipy._external.array_api_compat.numpy.fft main.py
 
 if errorlevel 1 (
