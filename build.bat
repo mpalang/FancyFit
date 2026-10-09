@@ -9,12 +9,11 @@ pyinstaller ^
   --windowed ^
   --clean ^
   --noconfirm ^
-  --distpath WindowsApp ^
+  --distpath "%~dp0..\FancyFit_Release" ^
   --workpath build ^
   --specpath build ^
   --icon="%~dp0icon.ico" ^
-  --hidden-import scipy._external.array_api_compat.numpy.fft main.py ^
-  main.py
+  --hidden-import scipy._external.array_api_compat.numpy.fft main.py
 
 if errorlevel 1 (
     echo BUILD FAILED
