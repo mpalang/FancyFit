@@ -28,9 +28,14 @@ I added some custom functions for convenience:
 edcg: exponential decay convolved with gauss
 
 
-It requires my fittools package which is not publicly available. I'm working on a python code that works as a standalone.
+It requires my fittoolkit package which is not publicly available.
 
 The bundled .exe should work regardless.
+
+![Screenshot 1](docs/Screenshot1.png)
+
+![Screenshot 2](docs/Screenshot2.png)
+
 
 
 Bundle as windows .exe:

@@ -142,6 +142,15 @@ class MainWindow(QMainWindow):
         preferences_action.triggered.connect(self.open_settings)
         functionbuilder_action.triggered.connect(self.open_functionbuilder)
 
+        #Data Menu
+        data_menu = menu.addMenu("Data")
+
+        chirp_correction_action = QAction("Chirp Correction", self)
+
+        data_menu.addAction(chirp_correction_action)
+
+        chirp_correction_action.triggered.connect(self.open_chirp_correction)
+
 
     def create_status_bar(self):
         self.status_label1 = QLabel("no data")
@@ -228,6 +237,21 @@ class MainWindow(QMainWindow):
         self.data = ldw.data   
         self.dtp.set_limits((min(self.data.x),max(self.data.x)),
                             (min(self.data.y),max(self.data.y)))
+        self.make_plots()
+
+
+    @error_handler
+    def open_chirp_correction(self):
+        ErrorBox('Debug',f'self.data.x type: {type(self.data.x).__name__}', details = f"{self.data.x}" )
+        if self.data.x is None:
+            ErrorBox('No data',"Can't correct the chirp of no data.")
+            return
+        self.statusBar().showMessage('Correcting Chirp...')    
+        from gui.ChirpCorrectionWindow import ChirpCorrectionWindow
+        ccw = ChirpCorrectionWindow(self.data)   
+        if ccw.exec():
+            pass
+            #TODO: update data.
         self.make_plots()
 
     
