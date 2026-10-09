@@ -27,10 +27,9 @@ I added some custom functions for convenience:
 <!-- so: second order decay (geminate) -->
 edcg: exponential decay convolved with gauss
 
+It requires my fittoolkit package which is not publicly available. The bundled .exe should work regardless.
 
-It requires my fittoolkit package which is not publicly available.
-
-The bundled .exe should work regardless.
+Example Screenshots of the Windows App:
 
 ![Screenshot 1](docs/Screenshot1.png)
 
