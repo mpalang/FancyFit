@@ -21,7 +21,7 @@ def conv(a1,a2,x,mode='full',method='auto'):
     return y
 
 def exp_decay(t,t0,A,tau):
-    k=1/tau
+    # k=1/tau
     return A*np.exp(-(t-t0)/tau)*np.heaviside(t-t0,0)
 
 def exp_decay_conv_gauss(t,t0,A,tau,FWHM):

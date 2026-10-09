@@ -9,8 +9,8 @@ import sys
 from functools import wraps
 from PySide6.QtWidgets import QMessageBox
 
-import sys, logging, traceback
-from PySide6.QtWidgets import QApplication, QWidget
+import logging
+from PySide6.QtWidgets import QWidget
 
 
 class ErrorBox(QMessageBox):

@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QFrame,
     QTabWidget,
-    QSizePolicy,
     QMessageBox,
     QPlainTextEdit,
 )
@@ -113,7 +112,7 @@ class DataTweakPanel(QWidget):
             x_high = float(self.x_high.text())
             y_low = float(self.y_low.text())
             y_high = float(self.y_high.text())
-        except:
+        except ValueError:
             self.set_bg_color('rgba(255, 150, 150, 120)')
             return False
         
@@ -402,7 +401,7 @@ class FunctionsInputPanel(QWidget):
 
     def relabel_tabs(self):
        for i in range(self.tab_count):
-           if not 'IRF' in self.parm_tabs.tabText(i):
+           if 'IRF' not in self.parm_tabs.tabText(i):
                self.parm_tabs.setTabText(i, f"fun{i+1}")
                
                

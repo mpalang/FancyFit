@@ -9,12 +9,7 @@ import sys
 if str(Path(__file__).parent.parent) not in sys.path:
    sys.path.append(str(Path(__file__).parent.parent)) 
 from utils.auxiliary import FitFunctions
-from matplotlib import pyplot as plt
 import numpy as np
-from scipy.signal import convolve
-from fittoolkit import GlobalFit
-from numpy.linalg import inv
-from iminuit import Minuit as Mi
 
 ff = FitFunctions()
 ff.default()

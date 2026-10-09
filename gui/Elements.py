@@ -6,26 +6,21 @@ Created on Wed Jun 17 11:36:40 2026
 """
 # from curses.textpad import Textbox
 
-from PySide6 import QtWidgets
 import numpy as np
 from pathlib import Path
 from collections.abc import Callable
 
 from PySide6.QtWidgets import (
     QWidget,
-    QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
     QLabel,
     QPushButton,
     QLineEdit,
     QCheckBox,
     QComboBox,
-    QFrame,
     QSpinBox,
     QDoubleSpinBox,
     QSlider,
-    QMessageBox,
     QTextEdit,
     QAbstractSpinBox,
     QStyle,

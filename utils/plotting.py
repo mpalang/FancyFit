@@ -6,7 +6,6 @@ Created on Sat Jul  4 09:19:56 2026
 """
 
 from matplotlib.pyplot import get_cmap
-from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from PySide6.QtWidgets import QSizePolicy
 from matplotlib.figure import Figure
@@ -56,7 +55,7 @@ def make_cmap(name='fancy',n_levels=40,zrange=(-1,1)):
 # ---------------------------
 
 def get_break(x,axis_break):
-    if axis_break == 'auto' or type(axis_break)==str:
+    if isinstance(axis_break, str):
         ix0 = len(x)//3
     
     elif len(x)<3:

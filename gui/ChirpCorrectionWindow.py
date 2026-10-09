@@ -8,26 +8,16 @@ This Window is for creating or modifying fit functions.
 
 """
 
-from dataclasses import dataclass
 import sys
 from pathlib import Path
-import numpy as np
-from datetime import datetime
-from matplotlib import pyplot as plt
 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication,
-    QWidget,
     QDialog,
     QVBoxLayout,
-    QHBoxLayout,
     QGridLayout,
-    QLabel,
     QFrame,
-    QTabWidget,
-    QMessageBox,
-    QTextEdit,
     QSizePolicy,
 )
 
@@ -36,11 +26,9 @@ if str(Path(__file__).parent.parent) not in sys.path:
       sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.logger import add_logger  
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
-                          ParmRow)
-from utils.auxiliary import FitFunctions, fitFunction
+from gui.Elements import (Button,Inputbox,Label)
 from utils.plotting import LineCanvas
-from utils.error_handling import error_handler, ErrorBox
+from utils.error_handling import error_handler
 
 # =============================================================================
 # =============================================================================

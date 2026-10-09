@@ -9,20 +9,14 @@ This Window is for loading data. """
 import sys
 from pathlib import Path
 import numpy as np
-from datetime import datetime
 
 from PySide6.QtWidgets import (
     QApplication,
-    QWidget,
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
     QGridLayout,
-    QLabel,
     QFrame,
-    QTabWidget,
-    QMessageBox,
-    QTextEdit,
 )
 
 from PySide6.QtGui import QIcon
@@ -36,8 +30,7 @@ if str(Path(__file__).parent.parent) not in sys.path:
 
 from utils.logger import add_logger  
 from utils.auxiliary import data_class,fancyfitSettings
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,
-                          open_path,)
+from gui.Elements import (Button,Dropdown,Label,open_path,)
 
   
 # =============================================================================

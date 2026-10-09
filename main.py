@@ -12,7 +12,6 @@ from PySide6.QtGui import QIcon
 
 # Personal modules
 from utils.logger import setup_logger, add_logger
-from utils.error_handling import excepthook
 from gui.MainWindow import MainWindow   
 
 if __name__=='__main__':

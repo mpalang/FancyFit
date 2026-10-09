@@ -12,13 +12,12 @@ from PySide6.QtWidgets import (
     QWidget,
     QMainWindow,
     QVBoxLayout,
-    QLabel,
     QPlainTextEdit)
 
 path = str(Path(__file__).parent.parent)
 if path not in sys.path:
     sys.path.insert(0, path)
-from gui.Elements import ParmRow,Button
+from gui.Elements import ParmRow
 
 class Window(QMainWindow):
     def __init__(self):

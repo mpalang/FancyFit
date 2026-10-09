@@ -8,7 +8,6 @@ Created on Sun 7 June 14:27:42 2026
 import sys
 from pathlib import Path
 import numpy as np
-from time import perf_counter as pc
 from datetime import datetime
 from matplotlib import pyplot as plt
 
@@ -25,7 +24,7 @@ from PySide6.QtWidgets import (
     # QMessageBox,
     # QTextEdit,
 )
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtGui import QIcon
 
 from PySide6.QtGui import QAction
 from PySide6.QtCore import QThread

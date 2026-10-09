@@ -53,12 +53,12 @@ class data_class:
                 self.z_full = np.genfromtxt(settings.z_testdata_path).T
                 self.y_full = np.sort(np.genfromtxt(settings.y_testdata_path,delimiter=','))
                 self.x_full = np.sort(np.genfromtxt(settings.x_testdata_path,delimiter=','))
-            except:
-                raise ValueError('Could not load testdata. Specify path in settings.json')
+            except Exception as e:
+                raise ValueError('Could not load testdata. Specify path in settings.json') from e
                 
         elif self.x is None or self.y is None or self.z is None:
             self.z_full = np.full((2,2),np.nan)
-            self.y_full = np.linspace(0,1,2)
+            self.y_full = np.linspace(0,1,2)    
             self.x_full = np.linspace(0,1,2)
             
         else:

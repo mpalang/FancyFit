@@ -4,13 +4,9 @@ Created on Mon Jul 20 13:57:37 2026
 
 @author: moritzpalang
 """
-try:
-    from fittoolkit import GlobalFit
-except:
-    raise RuntimeError('fittoolkit not installed')
+from fittoolkit import GlobalFit
 
 import traceback
-from unittest import result
 
 from PySide6.QtCore import QObject, Signal, Slot
 

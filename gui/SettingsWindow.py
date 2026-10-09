@@ -12,37 +12,25 @@ The settings will also be returned if called by another window.
 
 import sys
 from pathlib import Path
-import numpy as np
-from datetime import datetime
-from matplotlib import pyplot as plt
 from copy import deepcopy
 
 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication,
-    QWidget,
     QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
     QGridLayout,
-    QLabel,
     QFrame,
-    QTabWidget,
     QMessageBox,
-    QTextEdit,
 )
 
-from PySide6.QtCore import Signal
 
 from utils.logger import add_logger  
 from utils.auxiliary import fancyfitSettings
-from gui.Elements import (Button,Slider,Dropdown,Inputbox,Textbox,Label,Spinbox,Checkbox)
+from gui.Elements import (Button,Inputbox,Label,Spinbox,Checkbox)
 
-from utils.logger import add_logger
 from utils.error_handling import error_handler
 
-import traceback
   
 # =============================================================================
 # =============================================================================
