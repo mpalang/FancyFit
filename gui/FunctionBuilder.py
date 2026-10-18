@@ -201,8 +201,7 @@ class FunctionBuilder(QDialog):
             self.build_parms_input()
         
         def values(self):
-            fields = [row.values() for row in self.parm_rows]
-                
+            fields = [row.values for row in self.parm_rows]
             return fields
         
     def build_function(self):
