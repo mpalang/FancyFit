@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
     QFrame,
 )
 
