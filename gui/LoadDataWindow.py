@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from PySide6.QtWidgets import (
+    QWidget,
     QApplication,
     QDialog,
     QVBoxLayout,
@@ -60,45 +61,101 @@ class LoadDataWindow(QDialog):
         self.create_ui()
 
 
-    
     def create_ui(self):
         
-        main_layout = QGridLayout()
-        
-        frame_general = QFrame()
-        frame_general.setFrameShape(QFrame.StyledPanel)
-        frame_general.setFrameShadow(QFrame.Raised)
-        layout_general = QVBoxLayout()
-        Dropdown(layout_general,['Multiple Files','One File'])
+        self.layout = QVBoxLayout()
+        self.data_type_dropdown = Dropdown(self.layout, ['Multiple Files','Lochi', 'One File'], command = self.on_data_type_change)
 
-        Label(layout_general,'x data',bold=True)
-        self.x_path = open_path(layout_general,default_path=self.set.x_data_path)
-        Label(layout_general,'y data',bold=True)
-        self.y_path = open_path(layout_general,default_path=self.set.y_data_path)
-        Label(layout_general,'Z data',bold=True)
-        self.z_path = open_path(layout_general,default_path=self.set.z_data_path)
-        
-        frame_general.setLayout(layout_general)
-        main_layout.addWidget(frame_general)
+        self.input_fields = self.create_files_input()
+        self.layout.addWidget(self.input_fields)
     
         frame_action = QFrame()
         layout_action = QHBoxLayout()
         Button(layout_action,'Load',connect=self.on_load)
         Button(layout_action,'Cancel',connect=self.on_cancel)
         frame_action.setLayout(layout_action)
-        main_layout.addWidget(frame_action)
+        self.layout.addWidget(frame_action)
         
-        self.setLayout(main_layout)
-    
+        self.setLayout(self.layout)
+
+
+    def on_data_type_change(self):
+        # Get index of input widget
+        index = self.layout.indexOf(self.input_fields)
+
+        # Remove the old input fields
+        self.layout.removeWidget(self.input_fields)
+        self.input_fields.deleteLater()
+
+        # Create new input fields based on the selected data type
+        self.input_fields = self.create_files_input()
+        self.layout.insertWidget(index,self.input_fields)
+
+
+    def create_files_input(self):
+        data_type = self.data_type_dropdown.currentText()
+        if data_type == 'Multiple Files':
+            return self.create_multiple_files_input()
+        elif data_type == 'Lochi':
+            return self.create_lochi_input()
+        elif data_type == 'One File':
+            return self.create_one_file_input()
+        else:
+            raise ValueError(f"Unknown data type: {data_type}")
+        
+
+    def create_multiple_files_input(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        Label(layout,'x data',bold=True)
+        self.x_path = open_path(layout,default_path=self.set.x_data_path)
+        Label(layout,'y data',bold=True)
+        self.y_path = open_path(layout,default_path=self.set.y_data_path)
+        Label(layout,'Z data',bold=True)
+        self.z_path = open_path(layout,default_path=self.set.z_data_path)
+
+        widget.setLayout(layout)
+        return widget
+
+
+    def create_lochi_input(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        Label(layout,'WL Table',bold=True)
+        self.x_path = open_path(layout,default_path=self.set.x_data_path)
+        Label(layout,'TA Data',bold=True)
+        self.y_path = open_path(layout,default_path=self.set.y_data_path)
+        Label(layout,'Pump Spectra',bold=True)
+        self.z_path = open_path(layout,default_path=self.set.z_data_path)
+
+        widget.setLayout(layout)
+        return widget
+
+
+    def create_one_file_input(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        Label(layout,'Data Path',bold=True)
+        self.data_path = open_path(layout,default_path=self.set.x_data_path)
+        widget.setLayout(layout)
+        return widget
+
+
     def on_load(self):
-        x_path = self.x_path.entry_inputpath.text()
-        y_path = self.y_path.entry_inputpath.text()
-        z_path = self.z_path.entry_inputpath.text()
+        data_type = self.data_type_dropdown.currentText()
+
+        if data_type == 'Multiple Files':
+            x_path = self.x_path.entry_inputpath.text()
+            y_path = self.y_path.entry_inputpath.text()
+            z_path = self.z_path.entry_inputpath.text()
         
-        x = np.genfromtxt(x_path)
-        y = np.genfromtxt(y_path)
-        z = np.genfromtxt(z_path)        
-        
+            x = np.genfromtxt(x_path)
+            y = np.genfromtxt(y_path)
+            z = np.genfromtxt(z_path)        
+
+        elif data_type == 'lochi':
+            pass
+
         #Update User path for next time
         self.set.x_data_path = x_path
         self.set.y_data_path = y_path
@@ -108,6 +165,7 @@ class LoadDataWindow(QDialog):
         self.data = data_class(x=x,y=y,z=z)
         self.data_loaded.emit(self.data)
         self.accept()
+
     
     def on_cancel(self):
         self.reject()
