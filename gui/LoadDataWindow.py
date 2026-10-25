@@ -9,6 +9,7 @@ This Window is for loading data. """
 import sys
 from pathlib import Path
 import numpy as np
+from numpy import typing as npt
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -39,18 +40,18 @@ from gui.Elements import (Button,Dropdown,Label,open_path,)
 # =============================================================================
 
 class LoadDataWindow(QDialog):
+    """A window for loading data from files. It allows the user to select the type of data they want to load and provides input fields for the corresponding file paths. 
+    Once the data is loaded, it emits a signal with the loaded data as three separate numpy arrays for x, y, and z."""
     
-    data_loaded = Signal(object)
+    data_loaded = Signal(object, object, object)  # Signal to emit the loaded data
     
-    def __init__(self,settings=None,no_comps=1):
+    def __init__(self,settings=None):
         super().__init__()
         self.logger = add_logger(__name__)
         self.setWindowTitle("Load Data")
         icon_path = Path(Path(__file__).parent,'Load_Icon.ico')
         self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(500, 200)
-        
-        self.no_comps = no_comps
         
         if not settings:
             self.set = fancyfitSettings()
@@ -121,11 +122,11 @@ class LoadDataWindow(QDialog):
         widget = QWidget()
         layout = QVBoxLayout()
         Label(layout,'WL Table',bold=True)
-        self.x_path = open_path(layout,default_path=self.set.x_data_path)
+        self.wl_table_path = open_path(layout,default_path=self.set.x_data_path)
         Label(layout,'TA Data',bold=True)
-        self.y_path = open_path(layout,default_path=self.set.y_data_path)
+        self.ta_data_path = open_path(layout,default_path=self.set.y_data_path)
         Label(layout,'Pump Spectra',bold=True)
-        self.z_path = open_path(layout,default_path=self.set.z_data_path)
+        self.pump_spectra_path = open_path(layout,default_path=self.set.z_data_path)
 
         widget.setLayout(layout)
         return widget
@@ -152,17 +153,32 @@ class LoadDataWindow(QDialog):
             y = np.genfromtxt(y_path)
             z = np.genfromtxt(z_path)        
 
-        elif data_type == 'lochi':
-            pass
+        elif data_type == 'Lochi':
+            wl_table_path = self.wl_table_path.entry_inputpath.text()
+            ta_data_path = self.ta_data_path.entry_inputpath.text()
+            pump_spectra_path = self.pump_spectra_path.entry_inputpath.text()
+
+            wl_table = np.genfromtxt(wl_table_path)
+            ta_data = np.genfromtxt(ta_data_path)
+            pump_spectra = np.genfromtxt(pump_spectra_path)
+            #TODO: Implement the logic to extract x, y, z from the lochi data
+
+        elif data_type == 'One File':
+            data_path = self.data_path.entry_inputpath.text()
+            data = np.genfromtxt(data_path)
+            #TODO: Implement the logic to extract x, y, z from the single file data
 
         #Update User path for next time
         self.set.x_data_path = x_path
         self.set.y_data_path = y_path
         self.set.z_data_path = z_path
         self.set.save()
-        
-        self.data = data_class(x=x,y=y,z=z)
-        self.data_loaded.emit(self.data)
+
+        self.x = x
+        self.y = y
+        self.z = z
+
+        self.data_loaded.emit(self.x, self.y, self.z)
         self.accept()
 
     

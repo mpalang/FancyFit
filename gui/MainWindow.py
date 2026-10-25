@@ -229,11 +229,12 @@ class MainWindow(QMainWindow):
     def open_load_data(self):
         self.statusBar().showMessage('Loading Data...')
         from gui.LoadDataWindow import LoadDataWindow
-        ldw = LoadDataWindow(no_comps=self.fip.no_comps)
+        ldw = LoadDataWindow()
         if not ldw.exec():
-            raise RuntimeError('Error loading Data.')
-        
-        self.data = ldw.data   
+            return
+
+        x, y, z = ldw.x, ldw.y, ldw.z
+        self.data = data_class(x=x, y=y, z=z) 
         self.dtp.set_limits((min(self.data.x),max(self.data.x)),
                             (min(self.data.y),max(self.data.y)))
         self.make_plots()

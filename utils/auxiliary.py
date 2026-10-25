@@ -19,6 +19,7 @@ from collections.abc import Callable
 
 import sympy as sp
 import numpy as np
+from numpy import typing as npt
 from copy import deepcopy
 
 from utils.models import FUNCTIONS
@@ -33,16 +34,16 @@ logger = add_logger(__name__)
 class data_class:
     TestData: bool = False
     scaling_factors: tuple = (1,1,1)
-    x_full: np.ndarray | None = None
-    y_full: np.ndarray | None = None
-    z_full: np.ndarray | None = None
-    x: np.ndarray | None = None
-    y: np.ndarray | None = None
-    z: np.ndarray | None = None
-    x_fit: np.ndarray | None = None
-    y_fit: np.ndarray | None = None
-    z_fit: np.ndarray | None = None
-    DADS: np.ndarray | None = None
+    x_full: npt.NDArray | None = None
+    y_full: npt.NDArray | None = None
+    z_full: npt.NDArray | None = None
+    x: npt.NDArray | None = None
+    y: npt.NDArray | None = None
+    z: npt.NDArray | None = None
+    x_fit: npt.NDArray | None = None
+    y_fit: npt.NDArray | None = None
+    z_fit: npt.NDArray | None = None
+    DADS: npt.NDArray | None = None
     
     def __post_init__(self, settings = None):
         if not settings:

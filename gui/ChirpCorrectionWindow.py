@@ -10,6 +10,7 @@ This Window is for creating or modifying fit functions.
 
 import sys
 from pathlib import Path
+from numpy import typing as npt
 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -27,7 +28,8 @@ if str(Path(__file__).parent.parent) not in sys.path:
 
 from utils.logger import add_logger  
 from gui.Elements import (Button,Inputbox,Label)
-from utils.plotting import LineCanvas
+from gui.LoadDataWindow import LoadDataWindow
+from utils.plotting import ContourCanvas
 from utils.error_handling import error_handler
 
 # =============================================================================
@@ -37,16 +39,18 @@ from utils.error_handling import error_handler
 
 class ChirpCorrectionWindow(QDialog):
 
-    def __init__(self, data):
+    def __init__(self, data: npt.NDArray | None = None):
         super().__init__()
         self.logger = add_logger(__name__)
         self.setWindowTitle("Chirp Correction")
-        icon_path = Path(Path(__file__).parent,'MainIcon.ico') #TODO: create specific Icon
-        self.setWindowIcon(QIcon(str(icon_path)))
+        # icon_path = Path(Path(__file__).parent,'MainIcon.ico') #TODO: create specific Icon
+        # self.setWindowIcon(QIcon(str(icon_path)))
         # self.resize(500, 500)
         # self.set_defaults()
 
         self.data = data
+        if data is None:
+            self.open_data_window()
 
         self.create_ui()
 
@@ -85,7 +89,7 @@ class ChirpCorrectionWindow(QDialog):
         plot_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         plot_layout = QVBoxLayout()
 
-        self.plot = LineCanvas()
+        self.plot = ContourCanvas()
         plot_layout.addWidget(self.plot)
         self.lines = self.plot.axes['main'].plot([None],[None],[None],[None],[None],[None])
         
@@ -100,6 +104,26 @@ class ChirpCorrectionWindow(QDialog):
     # Methods
     # =============================================================================
     
+    def open_data_window(self):
+        self.load_data_window = LoadDataWindow()
+        self.load_data_window.data_loaded.connect(self.on_data_loaded)
+        self.load_data_window.exec()
+
+    def on_data_loaded(self, x: npt.NDArray, y: npt.NDArray, z: npt.NDArray):
+        self.x = x
+        self.y = y
+        self.z = z
+
+        self.update_plot(self.x, self.y, self.z)
+
+        return x,y,z
+
+
+    def update_plot(self, x: npt.NDArray, y: npt.NDArray, z: npt.NDArray):
+        # Update the plot with the new data
+        self.plot.set_contour(x, y, z)
+
+
     @error_handler
     def refresh_parms(self):
         self.parms_panel.refresh_parms()
