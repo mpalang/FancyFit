@@ -28,7 +28,7 @@ if str(Path(__file__).parent.parent) not in sys.path:
 
 from utils.logger import add_logger  
 from gui.Elements import (Button,Inputbox,Label)
-from gui.LoadDataWindow import LoadDataWindow
+from gui.data_import.LoadDataWindow import LoadDataWindow
 from utils.plotting import ContourCanvas
 from utils.error_handling import error_handler
 

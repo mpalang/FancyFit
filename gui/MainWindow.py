@@ -43,7 +43,7 @@ from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 from fit.workers import GlobalFitWorker
 from utils.error_handling import error_handler, ErrorBox
 
-from gui.panels.main_window_panels import (DataTweakPanel,FitSettingsPanel,
+from gui.main_window_panels import (DataTweakPanel,FitSettingsPanel,
                                         FunctionsInputPanel, PlotPanel,ResultsPanel)
 
   
@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
     @error_handler
     def open_load_data(self):
         self.statusBar().showMessage('Loading Data...')
-        from gui.LoadDataWindow import LoadDataWindow
+        from gui.data_import.LoadDataWindow import LoadDataWindow
         ldw = LoadDataWindow()
         if not ldw.exec():
             return
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
             ErrorBox('No data',"Can't correct the chirp of no data.")
             return
         self.statusBar().showMessage('Correcting Chirp...')    
-        from gui.ChirpCorrectionWindow import ChirpCorrectionWindow
+        from gui.data_import.ChirpCorrectionWindow import ChirpCorrectionWindow
         ccw = ChirpCorrectionWindow(self.data)   
         if ccw.exec():
             pass

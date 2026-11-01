@@ -26,12 +26,13 @@ from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal
 
 # Add personal modules:
-if str(Path(__file__).parent.parent) not in sys.path:
-      sys.path.append(str(Path(__file__).parent.parent))
+if str(Path(__file__).parent.parent.parent) not in sys.path:
+      sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from utils.logger import add_logger  
 from utils.auxiliary import data_class,fancyfitSettings
 from gui.Elements import (Button,Dropdown,Label,open_path,)
+from gui.data_import.LochiImport import LochiImportWindow
 
   
 # =============================================================================
@@ -158,10 +159,18 @@ class LoadDataWindow(QDialog):
             ta_data_path = self.ta_data_path.entry_inputpath.text()
             pump_spectra_path = self.pump_spectra_path.entry_inputpath.text()
 
-            wl_table = np.genfromtxt(wl_table_path)
-            ta_data = np.genfromtxt(ta_data_path)
-            pump_spectra = np.genfromtxt(pump_spectra_path)
-            #TODO: Implement the logic to extract x, y, z from the lochi data
+            wl_table = np.genfromtxt(wl_table_path, delimiter='\t')
+            ta_data = np.genfromtxt(ta_data_path, delimiter='\t')
+            if pump_spectra_path:
+                pump_spectra = np.genfromtxt(pump_spectra_path)
+            else:
+                None
+
+            liw = LochiImportWindow(wl_table=wl_table, ta_data=ta_data)
+
+            if liw.exec() == QDialog.Accepted:
+                pass
+
 
         elif data_type == 'One File':
             data_path = self.data_path.entry_inputpath.text()

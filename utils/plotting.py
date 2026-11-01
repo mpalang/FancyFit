@@ -207,38 +207,34 @@ class ContourCanvas(BaseCanvas):
             self.axes["log"].set_xticks([])
 
 
-    def set_contour(self, x, y, Z, zrange=(-1,1), axis_break=2, **kwargs):
-        cmap,levels = make_cmap(zrange=zrange)
-        if self._layout == 'linear':
-            if 'fill' in self.contours:
-                for c in self.contours['fill'].collections:
-                    c.remove()
-                    
-            if 'zero_line' in self.contours:
-                for c in self.contours['zero_line'].collections:
-                    c.remove()
-                
-            self.contours['fill'] = self.axes['main'].contourf(x, y, Z, 
-                                                           colors=cmap,levels=levels,
-                                                           extend='both')
-            
-        elif self._layout == 'linlog':
-            iy0 = get_break(y,axis_break)
-            
-            if 'fill' in self.contours:
-                self.contours['fill'].remove()
-                
-            if 'fill_log' in self.contours:
-                self.contours['fill_log'].remove()
+    def _clear_contours(self, *keys):
+        for k in keys:
+            cs = self.contours.pop(k, None)
+            if cs is not None:
+                cs.remove()
 
-            self.contours['fill'] = self.axes['main'].contourf(x, y[:iy0], Z[:iy0,:], 
-                                                colors=cmap,levels=levels, 
-                                                extend='both')
-            
-            self.contours['fill_log'] = self.axes['log'].contourf(x, y[iy0:], Z[iy0:,:], 
-                                                colors=cmap,levels=levels, 
-                                                extend='both')
-            
+    def set_contour(self, x, y, Z, zrange=(-1, 1), axis_break=2, **kwargs):
+        self._data = (x, y, Z)              # for set_zrange
+        self._zrange = zrange
+        self._axis_break = axis_break
+
+        cmap, levels = make_cmap(zrange=zrange)
+        opts = dict(colors=cmap, levels=levels, extend='both')
+
+        if self._layout == 'linear':
+            self._clear_contours('fill')
+            self.contours['fill'] = self.axes['main'].contourf(x, y, Z, **opts)
+
+        elif self._layout == 'linlog':
+            iy0 = get_break(y, axis_break)
+            self._clear_contours('fill', 'fill_log')
+            self.contours['fill'] = self.axes['main'].contourf(
+                x, y[:iy0], Z[:iy0, :], **opts)
+            self.contours['fill_log'] = self.axes['log'].contourf(
+                x, y[iy0:], Z[iy0:, :], **opts)
+
+        self.draw_idle()
+                
     
     def rescale(self):
         for ax in self.axes:
