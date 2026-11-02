@@ -152,7 +152,14 @@ class LoadDataWindow(QDialog):
         
             x = np.genfromtxt(x_path)
             y = np.genfromtxt(y_path)
-            z = np.genfromtxt(z_path)        
+            z = np.genfromtxt(z_path)     
+
+            #Update User path for next time
+            self.set.x_data_path = x_path
+            self.set.y_data_path = y_path
+            self.set.z_data_path = z_path
+            self.set.save()   
+
 
         elif data_type == 'Lochi':
             wl_table_path = self.wl_table_path.entry_inputpath.text()
@@ -166,22 +173,19 @@ class LoadDataWindow(QDialog):
             else:
                 None
 
-            liw = LochiImportWindow(wl_table=wl_table, ta_data=ta_data)
+            liw = LochiImportWindow(wl_table=wl_table, ta_data=ta_data, name = Path(ta_data_path).stem, parent_folder=Path(ta_data_path).parent)
 
             if liw.exec() == QDialog.Accepted:
-                pass
+                x = liw.dt
+                y = liw.wl
+                z = liw.ta
 
 
         elif data_type == 'One File':
             data_path = self.data_path.entry_inputpath.text()
             data = np.genfromtxt(data_path)
             #TODO: Implement the logic to extract x, y, z from the single file data
-
-        #Update User path for next time
-        self.set.x_data_path = x_path
-        self.set.y_data_path = y_path
-        self.set.z_data_path = z_path
-        self.set.save()
+            return      
 
         self.x = x
         self.y = y

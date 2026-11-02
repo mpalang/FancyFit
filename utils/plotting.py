@@ -192,12 +192,13 @@ class ContourCanvas(BaseCanvas):
         if layout=='linear':
             self._layout = 'linear'
             self.clear()
+            self.contours = {}
             self.axes["main"] = self.fig.add_subplot(111)
 
         elif layout=='linlog':
             self._layout = 'linlog'
             self.clear()
-
+            self.contours = {}
             gs = self.fig.add_gridspec(2, 1, height_ratios=(2, 1), hspace=0.01)
 
             self.axes["log"] = self.fig.add_subplot(gs[0, 0])
@@ -210,8 +211,9 @@ class ContourCanvas(BaseCanvas):
     def _clear_contours(self, *keys):
         for k in keys:
             cs = self.contours.pop(k, None)
-            if cs is not None:
-                cs.remove()
+            if cs is None or cs.axes is None:
+                continue
+            cs.remove()
 
     def set_contour(self, x, y, Z, zrange=(-1, 1), axis_break=2, **kwargs):
         self._data = (x, y, Z)              # for set_zrange
