@@ -31,15 +31,10 @@ from utils.plotting import ContourCanvas
 from utils.error_handling import ErrorBox
 from gui.Elements import (Button, Label, Inputbox, Dropdown)
 
-  
 # =============================================================================
 # =============================================================================
 # =============================================================================
 # =============================================================================
-
-def sigmoid(x):
-    """Sigmoid function."""
-    return 1 / (1 + np.exp(-x))
 
 class LochiImportWindow(QDialog):
     """A window for loading data from files. It allows the user to select the type of data they want to load and provides input fields for the corresponding file paths. 
@@ -83,9 +78,13 @@ class LochiImportWindow(QDialog):
 
 
     def pretreat_data(self):
+        if self.wl_table is None or self.ta_data is None:
+            raise ValueError("both wl_table and ta_data are required")
+
         self._wl = self.wl_table[:,1][np.argsort(self.wl_table[:,0])]
         self._dt = self.ta_data[0,:]
         self._ta = self.ta_data[1:,:]
+        self._ta[np.where(self._ta < 0)] = np.nan  # Set negative values to NaN to protect against log10 errors  
         self.wl = np.linspace(min(self._wl), max(self._wl), self._ta.shape[0])  # Interpolate to match the number of columns in ta_data...ask about how the data is usually presented.
 
         breaks = np.where(self._dt[:-1] > self._dt[1:])[0] + 1
@@ -98,11 +97,11 @@ class LochiImportWindow(QDialog):
         self.dt = np.mean(np.array(dts),axis=0)
 
         tas = np.split(self._ta, breaks, axis=1)
-        self.ta = np.log(np.nanmean(tas, axis=0)) # correct sign?
+        self.ta = -np.log10(np.nanmean(tas, axis=0)) # correct sign?
 
 
     def create_ui(self):
-        self.layout = QHBoxLayout()
+        self.main_layout = QHBoxLayout()
 
         frame_parameters = QFrame()
         layout_parameters = QGridLayout()
@@ -124,43 +123,37 @@ class LochiImportWindow(QDialog):
         self.update_button = Button(layout_parameters, "Save", connect=self.on_save, grid=(6,0))
         self.reset_button = Button(layout_parameters, "Cancel", connect=self.on_cancel, grid=(6,1))
         frame_parameters.setLayout(layout_parameters)
-        self.layout.addWidget(frame_parameters)
+        self.main_layout.addWidget(frame_parameters)
 
         frame_plot = QFrame()
         layout_plot = QVBoxLayout()
         self.plot = ContourCanvas()
         layout_plot.addWidget(self.plot)
         frame_plot.setLayout(layout_plot)
-        self.layout.addWidget(frame_plot)
+        self.main_layout.addWidget(frame_plot)
+        self.plot.set_layout("linlog")
 
-        self.setLayout(self.layout)
+        self.setLayout(self.main_layout)
 
+    @property
+    def sign(self):
+        return 1 if self.sign_input.currentText() == '+' else -1
 
     def make_plot(self): 
-       if self.sign_input.currentText() == '+':
-           sign = 1
-       else:
-           sign = -1
-       self.plot.set_layout('linlog')
-       self.plot.set_contour(self.wl, self.dt, sign *self.ta.T , zrange=(-0.001,0.001), axis_break=1)
+       self.plot.set_contour(self.wl, self.dt, self.sign *self.ta.T , zrange=(-0.001,0.001), axis_break=1)
 
 
     def on_save(self):
-        if self.sign_input.currentText() == '+':
-           sign = 1
-        else:
-           sign = -1
         np.savetxt(Path(self.folder_input.text()) / f"{self.name_input.text()}_wl.csv", self.wl, delimiter=',')
         np.savetxt(Path(self.folder_input.text()) / f"{self.name_input.text()}_dt.csv", self.dt, delimiter=',')
-        np.savetxt(Path(self.folder_input.text()) / f"{self.name_input.text()}_ta.csv", sign * self.ta, delimiter=',')   
+        np.savetxt(Path(self.folder_input.text()) / f"{self.name_input.text()}_ta.csv", self.sign * self.ta, delimiter=',')   
         self.accept()
 
 
     def on_cancel(self):
         self.reject()
         
-        
-        
+          
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 if __name__ == "__main__":
