@@ -12,7 +12,6 @@ from PySide6.QtWidgets import QMessageBox
 import logging
 from PySide6.QtWidgets import QWidget
 
-
 class ErrorBox(QMessageBox):
     def __init__(self, title, message, details=None, InformativeText=None, parent=None):
         super().__init__(parent)
@@ -44,22 +43,36 @@ def find_owner(exc_tb, attr="logger"):
     return None
 
 
+def origin(exc_tb, depth=2):
+    """module.function:line for the innermost frame, plus its caller(s)."""
+    frames = []
+    tb = exc_tb
+    while tb is not None:
+        frames.append(tb)
+        tb = tb.tb_next
+
+    inner = frames[-1]
+    module = inner.tb_frame.f_globals.get("__name__", "?")
+    chain = " <- ".join(f"{t.tb_frame.f_code.co_name}:{t.tb_lineno}"
+                        for t in frames[-depth:])
+    return f"{module}.{chain}"
+
+
 def excepthook(exc_type, exc_value, exc_tb):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_tb)
         return
 
-    owner = find_owner(exc_tb)
-    logger = getattr(owner, "logger", None) or logging.getLogger(__name__)
-    frame = traceback.extract_tb(exc_tb)[-1]
+    where = origin(exc_tb)
     text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
 
-    logger.error("Exception in %s: %s", frame.name, exc_value,
+    owner = find_owner(exc_tb)                      # the window that raised
+    logger = getattr(owner, "logger", None) or logging.getLogger(__name__)
+    logger.error("%s in %s: %s", exc_type.__name__, where, exc_value,
                  exc_info=(exc_type, exc_value, exc_tb))
 
-    ErrorBox("error", f"Error in {frame.name}:\n {exc_value}",
+    ErrorBox(f"{exc_type.__name__} in {where}", str(exc_value),
              details=text, parent=owner)
-
 
 
 def error_handler(func):
@@ -76,6 +89,3 @@ def error_handler(func):
                      details=traceback.format_exc(),parent=self)
     return wrapper
 
-
-# def handle_exceptions(exc_type, exc_value, exc_tb):
-    # logger

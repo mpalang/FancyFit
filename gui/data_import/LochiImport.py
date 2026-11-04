@@ -24,7 +24,7 @@ from PySide6.QtGui import QIcon
 
 # Add personal modules:
 if str(Path(__file__).parent.parent.parent) not in sys.path:
-      sys.path.append(str(Path(__file__).parent.parent.parent))
+    sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from utils.logger import add_logger  
 from utils.plotting import ContourCanvas
@@ -157,15 +157,21 @@ class LochiImportWindow(QDialog):
 # ---------------------------
 # ENTRY POINT (Spyder-safe)
 if __name__ == "__main__":
+    from utils.error_handling import excepthook
+    from utils.logger import setup_logger
+    setup_logger()
+    sys.excepthook = excepthook
+
+
     app = QApplication.instance()
 
     if app is None:
         app = QApplication(sys.argv)
 
-    wl_table_path = Path(r"C:\Users\morit\OneDrive\Work\Uni-Rostock\Testdaten\WaveLengthTable.dat")
-    ta_data_path = Path(r"C:\Users\morit\OneDrive\Work\Uni-Rostock\Testdaten\Coum153_eth_testmssg.dat")
+    # wl_table_path = Path(r"C:\Users\morit\OneDrive\Work\Uni-Rostock\Testdaten\WaveLengthTable.dat")
+    # ta_data_path = Path(r"C:\Users\morit\OneDrive\Work\Uni-Rostock\Testdaten\Coum153_eth_testmssg.dat")
 
-    window = LochiImportWindow(wl_table=wl_table_path, ta_data=ta_data_path)
+    window = LochiImportWindow()
     window.show()
 
     if not QApplication.instance().startingUp():

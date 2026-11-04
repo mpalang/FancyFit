@@ -41,7 +41,6 @@ from utils.logger import add_logger
 from utils.auxiliary import fancyfitSettings, FitFunctions, data_class
 
 from fit.workers import GlobalFitWorker
-from utils.error_handling import error_handler, ErrorBox
 
 from gui.main_window_panels import (DataTweakPanel,FitSettingsPanel,
                                         FunctionsInputPanel, PlotPanel,ResultsPanel)
@@ -55,7 +54,6 @@ from gui.main_window_panels import (DataTweakPanel,FitSettingsPanel,
 class MainWindow(QMainWindow):
     """This is the main Window for FancyFit."""
         
-    @error_handler
     def __init__(self):
         super().__init__()
         self.logger = add_logger(__name__)
@@ -88,7 +86,6 @@ class MainWindow(QMainWindow):
     # =============================================================================
     # Assemble UI:
     # =============================================================================
-    @error_handler
     def create_ui(self):
         self.main_layout = QHBoxLayout()
         
@@ -217,7 +214,6 @@ class MainWindow(QMainWindow):
         self.FitFuns = FitFunctions()#Replace old FitFuns with new sympy method
 
     
-    @error_handler
     def initialize_data(self):
         if self.use_test_data:
             self.data = data_class(TestData=True)
@@ -225,7 +221,6 @@ class MainWindow(QMainWindow):
             self.data = data_class()
 
 
-    @error_handler
     def open_load_data(self):
         self.statusBar().showMessage('Loading Data...')
         from gui.data_import.LoadDataWindow import LoadDataWindow
@@ -240,12 +235,12 @@ class MainWindow(QMainWindow):
         self.make_plots()
 
 
-    @error_handler
     def open_chirp_correction(self):
-        ErrorBox('Debug',f'self.data.x type: {type(self.data.x).__name__}', details = f"{self.data.x}" )
+        # ErrorBox('Debug',f'self.data.x type: {type(self.data.x).__name__}', details = f"{self.data.x}" )
         if self.data.x is None:
-            ErrorBox('No data',"Can't correct the chirp of no data.")
+            raise ValueError("Can't correct chirp if there is no data.")
             return
+        
         self.statusBar().showMessage('Correcting Chirp...')    
         from gui.data_import.ChirpCorrectionWindow import ChirpCorrectionWindow
         ccw = ChirpCorrectionWindow(self.data)   
@@ -255,18 +250,15 @@ class MainWindow(QMainWindow):
         self.make_plots()
 
     
-    @error_handler
     def cut_data(self):
         self.data.cut_data(*self.dtp.x_limits,*self.dtp.y_limits)
         self.plp.make_plots(self.data)
     
     
-    @error_handler
     def uncut_data(self):
         pass
     
     
-    # @error_handler
     def make_plots(self):        
         self.plp.make_plots(self.data)
         self.plp.rescale()
@@ -288,9 +280,8 @@ class MainWindow(QMainWindow):
             self.fip.add_irf('gauss')
 
         self.statusBar().showMessage('settings updated')
+
         
-    
-    @error_handler
     def open_functionbuilder(self):
         from gui.FunctionBuilder import FunctionBuilder
         fbw = FunctionBuilder()
@@ -341,7 +332,6 @@ class MainWindow(QMainWindow):
     # =============================================================================
     # Fit Functions and Classes:
     # =============================================================================
-    @error_handler   
     def prepare_fit_settings(self):
         # Prepare settings for global fit
 
@@ -354,7 +344,6 @@ class MainWindow(QMainWindow):
         return settings
     
     
-    @error_handler
     def execute_global_fit(self):
             self.statusBar().showMessage('Executing Global Fit...')
             
@@ -377,7 +366,7 @@ class MainWindow(QMainWindow):
             
             self.thread.start()
             
-    @error_handler
+    
     def update_fit_progress(self,progress):
         # if isinstance(progress,str):
             self.statusBar().showMessage(f'Executing Global Fit: {progress}')
@@ -425,7 +414,6 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Ready...',0)
     
         
-    @error_handler
     def update_results(self):
             p_dict = self.gf.fit_parms
             # errors = np.array(self.gf.m.errors)
@@ -461,6 +449,8 @@ class MainWindow(QMainWindow):
 # ENTRY POINT (Spyder-safe)
 # ---------------------------
 if __name__ == "__main__":
+    from utils.error_handling import excepthook
+    sys.excepthook = excepthook
     
     # Create QApplication only once
     app = QApplication.instance()
